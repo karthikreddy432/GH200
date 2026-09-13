@@ -1,0 +1,1090 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GH-200 Interactive Companion</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#12141a;
+    --surface:#191c23;
+    --surface-raised:#20242d;
+    --border:#2b303b;
+    --border-soft:#232833;
+    --text:#e9e7de;
+    --text-muted:#9aa0ad;
+    --text-faint:#666c79;
+    --amber:#d9a548;
+    --green:#5fb37c;
+    --green-dim:#33422f;
+    --red:#d9685f;
+    --red-dim:#432a29;
+    --blue:#6f9fd8;
+    --mono:'IBM Plex Mono', 'SF Mono', Consolas, monospace;
+    --sans:'IBM Plex Sans', -apple-system, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:var(--sans);
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--blue);}
+
+  .shell{max-width:980px;margin:0 auto;padding:40px 24px 80px;}
+
+  header.top{margin-bottom:32px;}
+  header.top .kicker{
+    font-family:var(--mono);
+    font-size:12.5px;
+    color:var(--amber);
+    letter-spacing:0.02em;
+    margin-bottom:10px;
+  }
+  header.top h1{
+    font-size:28px;
+    font-weight:600;
+    margin:0 0 8px;
+    letter-spacing:-0.01em;
+  }
+  header.top p{
+    color:var(--text-muted);
+    max-width:640px;
+    margin:0;
+    font-size:15px;
+  }
+
+  nav.tabs{
+    display:flex;
+    gap:2px;
+    margin:32px 0 0;
+    border-bottom:1px solid var(--border);
+  }
+  nav.tabs button{
+    appearance:none;
+    background:none;
+    border:none;
+    color:var(--text-muted);
+    font-family:var(--sans);
+    font-size:14.5px;
+    font-weight:500;
+    padding:12px 18px;
+    cursor:pointer;
+    border-bottom:2px solid transparent;
+    transform:translateY(1px);
+  }
+  nav.tabs button:hover{color:var(--text);}
+  nav.tabs button.active{
+    color:var(--text);
+    border-bottom-color:var(--amber);
+  }
+
+  .progress-strip{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    align-items:center;
+    margin-top:18px;
+  }
+  .progress-pill{
+    font-family:var(--mono);
+    font-size:11.5px;
+    padding:4px 10px;
+    border-radius:999px;
+    border:1px solid var(--border);
+    color:var(--text-faint);
+    background:var(--surface);
+    transition:color 0.15s, border-color 0.15s, background 0.15s;
+  }
+  .progress-pill.done{
+    color:var(--green);
+    border-color:var(--green);
+    background:var(--green-dim);
+  }
+  .progress-pill.done::before{content:"✓ ";}
+  #progress-count{
+    font-family:var(--mono);
+    font-size:11.5px;
+    color:var(--text-faint);
+    margin-left:auto;
+  }
+
+  .panel{display:none; padding-top:28px;}
+  .panel.active{display:block;}
+
+  .grid{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap:20px;
+  }
+  @media (max-width: 760px){ .grid{grid-template-columns:1fr;} }
+
+  .card{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:6px;
+    padding:20px;
+  }
+  .card h2{
+    font-size:13px;
+    text-transform:none;
+    font-weight:600;
+    margin:0 0 14px;
+    color:var(--text);
+    font-family:var(--mono);
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .card h2 .dot{width:7px;height:7px;border-radius:50%;background:var(--amber);display:inline-block;}
+
+  label.field{display:block; margin-bottom:14px;}
+  label.field .lbl{
+    display:block;
+    font-size:12.5px;
+    color:var(--text-muted);
+    margin-bottom:5px;
+  }
+  input[type=text], select, textarea{
+    width:100%;
+    background:var(--surface-raised);
+    border:1px solid var(--border);
+    color:var(--text);
+    border-radius:4px;
+    padding:8px 10px;
+    font-family:var(--mono);
+    font-size:13px;
+  }
+  textarea{resize:vertical; min-height:56px;}
+  select{cursor:pointer;}
+
+  .scope-row{
+    display:grid;
+    grid-template-columns: 1fr 90px;
+    align-items:center;
+    gap:10px;
+    padding:6px 0;
+    border-bottom:1px solid var(--border-soft);
+  }
+  .scope-row:last-child{border-bottom:none;}
+  .scope-row .name{font-family:var(--mono); font-size:13px; color:var(--text);}
+
+  .toggle-line{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin:14px 0 4px;
+    font-size:13px;
+    color:var(--text-muted);
+  }
+  .toggle-line input{accent-color:var(--amber);}
+
+  .result{
+    font-family:var(--mono);
+    font-size:13px;
+    border-radius:4px;
+    overflow:hidden;
+    border:1px solid var(--border);
+  }
+  .result-row{
+    display:grid;
+    grid-template-columns: 1fr 90px;
+    padding:7px 10px;
+    border-bottom:1px solid var(--border-soft);
+    background:var(--surface-raised);
+  }
+  .result-row:last-child{border-bottom:none;}
+  .result-row.granted{background:var(--green-dim);}
+  .result-row.zeroed{opacity:0.55;}
+  .result-row .status.granted-text{color:var(--green);}
+  .result-row .status.none-text{color:var(--text-faint);}
+
+  .note{
+    font-size:12.5px;
+    color:var(--text-muted);
+    margin-top:12px;
+    padding-top:12px;
+    border-top:1px dashed var(--border);
+  }
+  .note strong{color:var(--text);}
+  .warn{color:var(--red);}
+  .ok{color:var(--green);}
+
+  button.btn{
+    appearance:none;
+    background:var(--surface-raised);
+    border:1px solid var(--border);
+    color:var(--text);
+    font-family:var(--sans);
+    font-size:13px;
+    font-weight:500;
+    padding:9px 14px;
+    border-radius:4px;
+    cursor:pointer;
+  }
+  button.btn:hover{border-color:var(--amber); color:var(--amber);}
+  button.btn.primary{background:var(--amber); color:#1a1305; border-color:var(--amber); font-weight:600;}
+  button.btn.primary:hover{opacity:0.9; color:#1a1305;}
+
+  .stagebox{
+    font-family:var(--mono);
+    font-size:13px;
+    background:var(--surface-raised);
+    border:1px solid var(--border);
+    border-radius:4px;
+    padding:12px 14px;
+    margin-bottom:10px;
+  }
+  .stagebox .step-label{color:var(--amber); font-size:11.5px; margin-bottom:4px;}
+  .stagebox .count{color:var(--green); font-weight:600;}
+  .job-list{
+    font-family:var(--mono);
+    font-size:12px;
+    color:var(--text-muted);
+    line-height:1.7;
+    word-break:break-word;
+  }
+  .job-list .removed{color:var(--red); text-decoration:line-through;}
+  .job-list .added{color:var(--green);}
+
+  .qtree{font-size:14px;}
+  .qtree .question{
+    font-family:var(--mono);
+    font-size:12.5px;
+    color:var(--amber);
+    margin-bottom:10px;
+  }
+  .qtree .options{display:flex; flex-direction:column; gap:8px; margin-bottom:18px;}
+  .qtree .options button{
+    text-align:left;
+    background:var(--surface-raised);
+    border:1px solid var(--border);
+    color:var(--text);
+    padding:11px 14px;
+    border-radius:4px;
+    cursor:pointer;
+    font-family:var(--sans);
+    font-size:13.5px;
+  }
+  .qtree .options button:hover{border-color:var(--blue);}
+  .breadcrumb{
+    font-family:var(--mono);
+    font-size:11.5px;
+    color:var(--text-faint);
+    margin-bottom:16px;
+  }
+  .breadcrumb span{color:var(--text-muted);}
+  .verdict{
+    border-radius:6px;
+    padding:16px 18px;
+    border:1px solid;
+  }
+  .verdict.composite{border-color:var(--blue); background:rgba(111,159,216,0.08);}
+  .verdict.js{border-color:var(--green); background:rgba(95,179,124,0.08);}
+  .verdict.docker{border-color:var(--red); background:rgba(217,104,95,0.08);}
+  .verdict h3{margin:0 0 8px; font-family:var(--mono); font-size:16px;}
+  .verdict p{margin:0 0 6px; font-size:13.5px; color:var(--text-muted);}
+  .verdict .caveat{font-size:12.5px; color:var(--amber); margin-top:10px;}
+
+  footer{
+    margin-top:48px;
+    padding-top:20px;
+    border-top:1px solid var(--border);
+    font-size:12px;
+    color:var(--text-faint);
+    font-family:var(--mono);
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <header class="top">
+    <div class="kicker">GH-200 // companion.html</div>
+    <h1>Five concepts worth playing with, not just reading</h1>
+    <p>Permission scope-zeroing, matrix expansion, action-type selection, secrets propagation, and the pull_request_target trap all reward hands-on manipulation more than prose. Pick a tab, change the inputs, watch the result update.</p>
+  </header>
+
+  <div class="progress-strip">
+    <span class="progress-pill" data-key="perms">Permissions</span>
+    <span class="progress-pill" data-key="matrix">Matrix</span>
+    <span class="progress-pill" data-key="action">Action Type</span>
+    <span class="progress-pill" data-key="secrets">Secrets</span>
+    <span class="progress-pill" data-key="prtarget">PR Trigger</span>
+    <span id="progress-count">0/5 modules exercised</span>
+  </div>
+
+  <nav class="tabs">
+    <button class="tab-btn active" data-tab="perms">Permission Scoping</button>
+    <button class="tab-btn" data-tab="matrix">Matrix Math</button>
+    <button class="tab-btn" data-tab="action">Action Type Picker</button>
+    <button class="tab-btn" data-tab="secrets">Secrets Tracer</button>
+    <button class="tab-btn" data-tab="prtarget">PR Trigger Simulator</button>
+  </nav>
+
+  <!-- ===================== PANEL 1: PERMISSIONS ===================== -->
+  <section class="panel active" id="panel-perms">
+    <div class="grid">
+      <div class="card">
+        <h2><span class="dot"></span>workflow-level permissions:</h2>
+        <div id="wf-scopes"></div>
+
+        <div class="toggle-line">
+          <input type="checkbox" id="job-override-toggle">
+          <label for="job-override-toggle">This job declares its own <code>permissions:</code> block</label>
+        </div>
+        <div id="job-scopes" style="display:none; margin-top:10px; padding-top:10px; border-top:1px dashed var(--border);"></div>
+
+        <div class="toggle-line">
+          <input type="checkbox" id="fork-toggle">
+          <label for="fork-toggle">Triggered by <code>pull_request</code> from a fork</label>
+        </div>
+        <div class="toggle-line">
+          <input type="checkbox" id="target-toggle">
+          <label for="target-toggle">...but the event is <code>pull_request_target</code></label>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2><span class="dot" style="background:var(--green)"></span>effective GITHUB_TOKEN</h2>
+        <div class="result" id="perm-result"></div>
+        <div class="note" id="perm-note"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== PANEL 2: MATRIX ===================== -->
+  <section class="panel" id="panel-matrix">
+    <div class="grid">
+      <div class="card">
+        <h2><span class="dot"></span>strategy.matrix</h2>
+        <label class="field">
+          <span class="lbl">Dimension A — name</span>
+          <input type="text" id="dimA-name" value="os">
+        </label>
+        <label class="field">
+          <span class="lbl">Dimension A — values (comma-separated)</span>
+          <input type="text" id="dimA-values" value="ubuntu-latest, windows-latest, macos-latest">
+        </label>
+        <label class="field">
+          <span class="lbl">Dimension B — name</span>
+          <input type="text" id="dimB-name" value="node-version">
+        </label>
+        <label class="field">
+          <span class="lbl">Dimension B — values (comma-separated)</span>
+          <input type="text" id="dimB-values" value="18, 20, 22">
+        </label>
+        <label class="field">
+          <span class="lbl">exclude — one pair per line, as "A=value, B=value"</span>
+          <textarea id="exclude-input">os=macos-latest, node-version=18</textarea>
+        </label>
+        <label class="field">
+          <span class="lbl">include — one pair per line, as "A=value, B=value" (can introduce new values)</span>
+          <textarea id="include-input">os=ubuntu-latest, node-version=22</textarea>
+        </label>
+        <button class="btn primary" id="matrix-run">Recalculate</button>
+      </div>
+
+      <div class="card">
+        <h2><span class="dot" style="background:var(--green)"></span>expansion, stage by stage</h2>
+        <div id="matrix-result"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== PANEL 3: ACTION TYPE ===================== -->
+  <section class="panel" id="panel-action">
+    <div class="grid">
+      <div class="card">
+        <h2><span class="dot"></span>describe what the action needs to do</h2>
+        <div class="breadcrumb" id="action-breadcrumb"><span>start</span></div>
+        <div class="qtree" id="action-qtree"></div>
+        <button class="btn" id="action-reset" style="margin-top:4px;">Start over</button>
+      </div>
+      <div class="card">
+        <h2><span class="dot" style="background:var(--green)"></span>recommendation</h2>
+        <div id="action-result" style="color:var(--text-muted); font-size:13.5px;">Answer the questions on the left to see a recommendation build up here.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== PANEL 4: SECRETS TRACER ===================== -->
+  <section class="panel" id="panel-secrets">
+    <div class="grid">
+      <div class="card">
+        <h2><span class="dot"></span>nested workflow_call chain</h2>
+        <label class="field">
+          <span class="lbl">Secrets defined on the repo</span>
+        </label>
+        <div id="secrets-root-list"></div>
+
+        <label class="field" style="margin-top:14px;">
+          <span class="lbl">Chain depth — nested workflow_call hops (cap is 4)</span>
+          <select id="secrets-hop-count">
+            <option value="1">1 hop</option>
+            <option value="2">2 hops</option>
+            <option value="3" selected>3 hops</option>
+            <option value="4">4 hops</option>
+          </select>
+        </label>
+
+        <div id="secrets-hop-config"></div>
+      </div>
+
+      <div class="card">
+        <h2><span class="dot" style="background:var(--green)"></span>what actually gets through</h2>
+        <div id="secrets-trace"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== PANEL 5: PULL_REQUEST vs PULL_REQUEST_TARGET ===================== -->
+  <section class="panel" id="panel-prtarget">
+    <div class="grid">
+      <div class="card">
+        <h2><span class="dot"></span>configure the trigger</h2>
+        <label class="field">
+          <span class="lbl">Event</span>
+          <select id="prt-event">
+            <option value="pull_request">pull_request</option>
+            <option value="pull_request_target">pull_request_target</option>
+          </select>
+        </label>
+        <div class="toggle-line">
+          <input type="checkbox" id="prt-fork-toggle" checked>
+          <label for="prt-fork-toggle">PR opened from a fork (not a branch on this repo)</label>
+        </div>
+        <div class="toggle-line">
+          <input type="checkbox" id="prt-checkout-toggle" checked>
+          <label for="prt-checkout-toggle">Workflow explicitly checks out the PR's head commit (e.g. <code>ref: github.event.pull_request.head.sha</code>)</label>
+        </div>
+        <div class="toggle-line">
+          <input type="checkbox" id="prt-execute-toggle" checked>
+          <label for="prt-execute-toggle">A later step runs that checked-out code (install deps, build, test, etc.)</label>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2><span class="dot" style="background:var(--green)"></span>what actually happens</h2>
+        <div class="result" id="prt-result"></div>
+        <div class="note" id="prt-note"></div>
+      </div>
+    </div>
+  </section>
+
+  <footer>GH-200 Exam Prep — interactive companion — everything runs client-side, nothing is sent anywhere.</footer>
+</div>
+
+<script>
+/* ---------------------------------------------------------
+   TAB SWITCHING
+--------------------------------------------------------- */
+const VALID_TABS = ['perms','matrix','action','secrets','prtarget'];
+
+function activateTab(tabName){
+  if (!VALID_TABS.includes(tabName)) return;
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  const btn = document.querySelector(`.tab-btn[data-tab="${tabName}"]`);
+  if (btn) btn.classList.add('active');
+  const panel = document.getElementById('panel-'+tabName);
+  if (panel) panel.classList.add('active');
+}
+
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    activateTab(btn.dataset.tab);
+    history.replaceState(null, '', '#'+btn.dataset.tab);
+  });
+});
+
+// Deep-link support: opening 08_interactive_companion.html#matrix (etc.) jumps
+// straight to that tab instead of always landing on Permission Scoping.
+function activateFromHash(){
+  const tab = location.hash.replace('#','');
+  if (VALID_TABS.includes(tab)) activateTab(tab);
+}
+window.addEventListener('hashchange', activateFromHash);
+activateFromHash();
+
+/* ---------------------------------------------------------
+   MODULE 1 — PERMISSION SCOPING PLAYGROUND
+--------------------------------------------------------- */
+const SCOPES = ['contents','issues','pull-requests','packages','deployments','actions','id-token','checks','statuses','security-events'];
+const LEVELS = ['none','read','write'];
+
+function buildScopeRows(containerId, prefix){
+  const el = document.getElementById(containerId);
+  el.innerHTML = SCOPES.map(s => `
+    <div class="scope-row">
+      <span class="name">${s}</span>
+      <select data-scope="${s}" id="${prefix}-${s}">
+        <option value="unset">unset</option>
+        <option value="none">none</option>
+        <option value="read">read</option>
+        <option value="write">write</option>
+      </select>
+    </div>
+  `).join('');
+}
+buildScopeRows('wf-scopes','wf');
+buildScopeRows('job-scopes','job');
+// sensible starting defaults, mirroring the Task 5.1 example in Ch.5
+document.getElementById('wf-contents').value = 'read';
+document.getElementById('job-issues').value = 'write';
+
+document.getElementById('job-override-toggle').addEventListener('change', (e)=>{
+  document.getElementById('job-scopes').style.display = e.target.checked ? 'block' : 'none';
+  computePerms();
+});
+document.getElementById('fork-toggle').addEventListener('change', computePerms);
+document.getElementById('target-toggle').addEventListener('change', computePerms);
+document.querySelectorAll('#wf-scopes select, #job-scopes select').forEach(sel=>{
+  sel.addEventListener('change', computePerms);
+});
+
+function readScopeBlock(prefix){
+  const block = {};
+  let anySet = false;
+  SCOPES.forEach(s=>{
+    const v = document.getElementById(`${prefix}-${s}`).value;
+    if(v !== 'unset'){ block[s] = v; anySet = true; }
+  });
+  return {block, anySet};
+}
+
+function computePerms(){
+  const wf = readScopeBlock('wf');
+  const jobOverrideOn = document.getElementById('job-override-toggle').checked;
+  const job = jobOverrideOn ? readScopeBlock('job') : null;
+  const isFork = document.getElementById('fork-toggle').checked;
+  const isTarget = document.getElementById('target-toggle').checked;
+
+  // Determine the effective source block.
+  // Rule: a job-level permissions block REPLACES the workflow-level one entirely (not merged).
+  let source, sourceZeroed;
+  if (job && job.anySet) {
+    source = job.block;
+    sourceZeroed = true;
+  } else if (wf.anySet) {
+    source = wf.block;
+    sourceZeroed = true;
+  } else {
+    source = {};
+    sourceZeroed = false; // nothing declared anywhere -> repo/org default applies, not modeled here
+  }
+
+  const effective = {};
+  SCOPES.forEach(s=>{
+    if (sourceZeroed) {
+      effective[s] = source[s] || 'none';
+    } else {
+      effective[s] = 'default';
+    }
+  });
+
+  // Fork PR hard floor — read-only, no secrets — UNLESS the event is pull_request_target
+  let forkFloorApplied = false;
+  if (isFork && !isTarget) {
+    forkFloorApplied = true;
+    SCOPES.forEach(s=>{
+      if (s === 'contents') {
+        effective[s] = (effective[s] === 'default') ? 'read' : (effective[s] === 'write' ? 'read' : effective[s]);
+      } else {
+        effective[s] = (effective[s] === 'write') ? 'read' : effective[s];
+      }
+    });
+  }
+
+  renderPermResult(effective, sourceZeroed, forkFloorApplied, jobOverrideOn && job && job.anySet, isFork, isTarget);
+}
+
+function renderPermResult(effective, zeroed, forkFloor, jobReplaced, isFork, isTarget){
+  const el = document.getElementById('perm-result');
+  el.innerHTML = SCOPES.map(s=>{
+    const v = effective[s];
+    const granted = (v === 'write' || v === 'read');
+    const rowClass = granted ? 'granted' : (zeroed ? 'zeroed' : '');
+    const statusClass = granted ? 'granted-text' : 'none-text';
+    const label = v === 'default' ? 'default (unscoped)' : v;
+    const symbol = v === 'default' ? '•' : (granted ? '✓' : '✗');
+    return `<div class="result-row ${rowClass}"><span>${s}</span><span class="status ${statusClass}">${symbol} ${label}</span></div>`;
+  }).join('');
+
+  let notes = [];
+  if (jobReplaced) {
+    notes.push('The job-level block is present, so it <strong>replaces</strong> the workflow-level block entirely — anything only set at the workflow level is gone for this job.');
+  } else if (zeroed) {
+    notes.push('At least one scope is explicitly set, so <strong>scope-zeroing</strong> is in effect: every scope not mentioned is forced to <code>none</code>, regardless of repo/org defaults.');
+  } else {
+    notes.push('No <code>permissions:</code> block is set anywhere, so the repo/org default <code>GITHUB_TOKEN</code> permissions apply unmodified (not modeled numerically here — flip a scope above to see zeroing kick in).');
+  }
+  if (forkFloor) {
+    notes.push('<span class="warn">Fork-PR floor applied:</span> since this run is a fork <code>pull_request</code> (not <code>pull_request_target</code>), the token is forced read-only with no secret access — no <code>permissions:</code> block can override this.');
+  } else if (isFork && isTarget) {
+    notes.push('<span class="ok">pull_request_target exception:</span> the fork-PR safety floor does NOT apply here — this job runs with the base repo\'s real permissions and secrets even though the PR is from a fork. That\'s exactly the trap covered in Chapter 5.2.');
+  }
+  document.getElementById('perm-note').innerHTML = notes.map(n=>`<p style="margin:0 0 6px;">${n}</p>`).join('');
+}
+computePerms();
+
+/* ---------------------------------------------------------
+   MODULE 2 — MATRIX MATH CALCULATOR
+--------------------------------------------------------- */
+function parseList(str){
+  return str.split(',').map(s=>s.trim()).filter(Boolean);
+}
+function parsePairLines(str, dimA, dimB){
+  return str.split('\n').map(line=>line.trim()).filter(Boolean).map(line=>{
+    const parts = line.split(',').map(p=>p.trim());
+    const obj = {};
+    parts.forEach(p=>{
+      const [k,...rest] = p.split('=');
+      if(k) obj[k.trim()] = rest.join('=').trim();
+    });
+    return obj;
+  });
+}
+function comboKey(combo, dimA, dimB){
+  return `${dimA}=${combo[dimA]}, ${dimB}=${combo[dimB]}`;
+}
+function matchesFilter(combo, filter, dimA, dimB){
+  // A filter matches a combo if every key it specifies equals the combo's value for that key
+  return Object.keys(filter).every(k=>{
+    if (k !== dimA && k !== dimB) return true; // ignore unrelated keys for matching purposes
+    return combo[k] === filter[k];
+  });
+}
+
+function runMatrix(){
+  const dimA = document.getElementById('dimA-name').value.trim() || 'dimA';
+  const dimB = document.getElementById('dimB-name').value.trim() || 'dimB';
+  const valsA = parseList(document.getElementById('dimA-values').value);
+  const valsB = parseList(document.getElementById('dimB-values').value);
+  const excludes = parsePairLines(document.getElementById('exclude-input').value, dimA, dimB);
+  const includes = parsePairLines(document.getElementById('include-input').value, dimA, dimB);
+
+  // Stage 1: cartesian product
+  let combos = [];
+  valsA.forEach(a=>{
+    valsB.forEach(b=>{
+      combos.push({[dimA]:a, [dimB]:b});
+    });
+  });
+  const stage1Count = combos.length;
+  const stage1List = combos.map(c=>comboKey(c,dimA,dimB));
+
+  // Stage 2: exclude
+  const removed = [];
+  combos = combos.filter(c=>{
+    const hit = excludes.some(f => matchesFilter(c, f, dimA, dimB) && Object.keys(f).length > 0);
+    if (hit) removed.push(comboKey(c,dimA,dimB));
+    return !hit;
+  });
+  const stage2Count = combos.length;
+
+  // Stage 3: include — GitHub Actions semantics: if an include entry matches an
+  // existing combo on ALL dims present in the base matrix, it merges extra keys
+  // into that combo. If it doesn't match any existing combo, it's added as a new one.
+  const added = [];
+  includes.forEach(inc=>{
+    const hasA = Object.prototype.hasOwnProperty.call(inc, dimA);
+    const hasB = Object.prototype.hasOwnProperty.call(inc, dimB);
+    let matchedExisting = false;
+    if (hasA && hasB) {
+      combos.forEach(c=>{
+        if (c[dimA] === inc[dimA] && c[dimB] === inc[dimB]) {
+          matchedExisting = true;
+          Object.keys(inc).forEach(k=>{ if(k!==dimA && k!==dimB) c[k]=inc[k]; });
+        }
+      });
+    }
+    if (!matchedExisting) {
+      combos.push({...inc});
+      added.push(Object.entries(inc).map(([k,v])=>`${k}=${v}`).join(', '));
+    }
+  });
+  const stage3Count = combos.length;
+
+  renderMatrixResult({
+    dimA, dimB, valsA, valsB,
+    stage1Count, stage1List,
+    stage2Count, removed,
+    stage3Count, added,
+    finalCombos: combos.map(c=>comboKey(c,dimA,dimB))
+  });
+}
+
+function renderMatrixResult(r){
+  const el = document.getElementById('matrix-result');
+  const capWarning = r.stage3Count > 256
+    ? `<p class="note warn">⚠ ${r.stage3Count} exceeds the 256-job hard cap per matrix — this configuration would be rejected. Split across multiple workflows or reusable-workflow calls.</p>`
+    : '';
+
+  el.innerHTML = `
+    <div class="stagebox">
+      <div class="step-label">1 . cartesian product — ${r.valsA.length} × ${r.valsB.length}</div>
+      <div><span class="count">${r.stage1Count}</span> combinations</div>
+    </div>
+    <div class="stagebox">
+      <div class="step-label">2 . exclude (applied first)</div>
+      <div>${r.removed.length ? r.removed.map(x=>`<div class="job-list removed">− ${x}</div>`).join('') : '<span style="color:var(--text-faint)">no matches removed</span>'}</div>
+      <div style="margin-top:6px;"><span class="count">${r.stage2Count}</span> combinations remain</div>
+    </div>
+    <div class="stagebox">
+      <div class="step-label">3 . include (applied second)</div>
+      <div>${r.added.length ? r.added.map(x=>`<div class="job-list added">+ ${x}</div>`).join('') : '<span style="color:var(--text-faint)">no new combinations added</span>'}</div>
+      <div style="margin-top:6px;"><span class="count">${r.stage3Count}</span> final job(s)</div>
+    </div>
+    ${capWarning}
+    <div class="note"><strong>Final matrix:</strong><div class="job-list" style="margin-top:6px;">${r.finalCombos.map(x=>`<div>${x}</div>`).join('')}</div></div>
+  `;
+}
+document.getElementById('matrix-run').addEventListener('click', runMatrix);
+runMatrix();
+
+/* ---------------------------------------------------------
+   MODULE 3 — ACTION TYPE PICKER
+--------------------------------------------------------- */
+const actionTree = {
+  start: {
+    question: "What does the action primarily need to do?",
+    options: [
+      { label: "Chain a few existing actions or shell steps together — no new logic", next: "composite_check" },
+      { label: "Run custom logic: call the GitHub API, parse data, do real computation", next: "js_check" },
+      { label: "Wrap a specific CLI tool, or needs an exact OS/library environment", next: "docker_check" },
+    ]
+  },
+  composite_check: {
+    question: "Does it need to run identically across Windows, macOS, and Linux?",
+    options: [
+      { label: "Yes — pure orchestration, no OS-specific tools", verdict: "composite" },
+      { label: "Actually, it needs a specific Linux tool underneath", next: "docker_check" },
+    ]
+  },
+  js_check: {
+    question: "Does it need to run on every runner OS the same way?",
+    options: [
+      { label: "Yes, and it's mostly API calls / data parsing", verdict: "js" },
+      { label: "No — it depends on a specific Linux binary or library", verdict: "docker" },
+    ]
+  },
+  docker_check: {
+    question: "Can the consuming workflows guarantee they'll always run on a Linux runner?",
+    options: [
+      { label: "Yes, that's an acceptable constraint", verdict: "docker" },
+      { label: "No — it must also work on Windows/macOS runners", next: "docker_fallback" },
+    ]
+  },
+  docker_fallback: {
+    question: "Since Docker container actions are Linux-only, reconsider the approach:",
+    options: [
+      { label: "Could the tool run via Node.js instead?", verdict: "js" },
+      { label: "Could each OS install/run the dependency directly as a step, then a composite action just orchestrates it?", verdict: "composite" },
+    ]
+  }
+};
+
+const verdicts = {
+  composite: {
+    title: "Composite action",
+    body: "runs.using: composite — pure YAML, no build step. Best for bundling existing steps/actions with no new logic.",
+    caveat: "Reminder: composite actions run directly on the runner, so they inherit whatever OS/tools that runner already has."
+  },
+  js: {
+    title: "JavaScript action",
+    body: "runs.using: node24 — build with ncc into a single dist/index.js. Best for custom logic that calls GitHub's API or needs to behave identically on any runner OS.",
+    caveat: "Remember the build step: consumers run the compiled dist/index.js, not your raw source — don't forget to commit the build output."
+  },
+  docker: {
+    title: "Docker container action",
+    body: "runs.using: docker — the action ships its own image with exactly the OS/toolchain/dependencies it needs.",
+    caveat: "⚠ Docker container actions only run on Linux runners — this is the single most commonly tested constraint on this decision."
+  }
+};
+
+let actionPath = [];
+
+function renderAction(nodeKey){
+  const node = actionTree[nodeKey];
+  const bc = document.getElementById('action-breadcrumb');
+  bc.innerHTML = 'start' + actionPath.map(p=>` → <span>${p}</span>`).join('');
+
+  const qtree = document.getElementById('action-qtree');
+  qtree.innerHTML = `
+    <div class="question">${node.question}</div>
+    <div class="options">
+      ${node.options.map((o,i)=>`<button data-idx="${i}">${o.label}</button>`).join('')}
+    </div>
+  `;
+  qtree.querySelectorAll('button').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const opt = node.options[+btn.dataset.idx];
+      actionPath.push(opt.label.slice(0, 28) + (opt.label.length > 28 ? '…' : ''));
+      if (opt.verdict) {
+        showVerdict(opt.verdict);
+      } else {
+        renderAction(opt.next);
+      }
+    });
+  });
+}
+
+function showVerdict(key){
+  const v = verdicts[key];
+  document.getElementById('action-result').innerHTML = `
+    <div class="verdict ${key}">
+      <h3>${v.title}</h3>
+      <p>${v.body}</p>
+      <div class="caveat">${v.caveat}</div>
+    </div>
+  `;
+  document.getElementById('action-qtree').innerHTML = '<p style="color:var(--text-faint); font-size:13px;">Recommendation reached. Click "Start over" to try a different path.</p>';
+}
+
+document.getElementById('action-reset').addEventListener('click', ()=>{
+  actionPath = [];
+  document.getElementById('action-result').innerHTML = 'Answer the questions on the left to see a recommendation build up here.';
+  renderAction('start');
+});
+
+renderAction('start');
+
+/* ---------------------------------------------------------
+   MODULE 4 — SECRETS PROPAGATION TRACER
+--------------------------------------------------------- */
+const secretsCatalog = ['API_KEY', 'DEPLOY_TOKEN', 'NPM_TOKEN'];
+let rootSecretsChecked = new Set(secretsCatalog);
+let hopConfigs = [];
+
+function renderRootSecrets(){
+  const el = document.getElementById('secrets-root-list');
+  el.innerHTML = secretsCatalog.map(s => `
+    <div class="toggle-line" style="margin:6px 0;">
+      <input type="checkbox" class="root-secret-cb" data-secret="${s}" ${rootSecretsChecked.has(s) ? 'checked' : ''}>
+      <label style="font-family:var(--mono); color:var(--text);">${s}</label>
+    </div>
+  `).join('');
+  el.querySelectorAll('.root-secret-cb').forEach(cb=>{
+    cb.addEventListener('change', ()=>{
+      if (cb.checked) rootSecretsChecked.add(cb.dataset.secret);
+      else rootSecretsChecked.delete(cb.dataset.secret);
+      runSecretsTrace();
+    });
+  });
+}
+
+function initHopConfigs(count){
+  const next = [];
+  for (let i=0; i<count; i++){
+    next.push(hopConfigs[i] || { mode: 'inherit', explicit: new Set(secretsCatalog) });
+  }
+  hopConfigs = next;
+}
+
+function renderHopConfig(){
+  const el = document.getElementById('secrets-hop-config');
+  el.innerHTML = hopConfigs.map((hc, i) => `
+    <div class="stagebox">
+      <div class="step-label">${i===0 ? 'root workflow' : 'hop '+i} → hop ${i+1} — secrets: block on this call</div>
+      <select class="hop-mode-select" data-idx="${i}" style="margin-bottom:8px;">
+        <option value="inherit" ${hc.mode==='inherit'?'selected':''}>secrets: inherit</option>
+        <option value="explicit" ${hc.mode==='explicit'?'selected':''}>explicit list — pick below</option>
+        <option value="none" ${hc.mode==='none'?'selected':''}>no secrets: key at all</option>
+      </select>
+      <div class="hop-explicit-list" style="${hc.mode==='explicit' ? '' : 'display:none;'}">
+        ${secretsCatalog.map(s=>`
+          <label style="display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--text-muted); margin:3px 0;">
+            <input type="checkbox" class="hop-explicit-cb" data-idx="${i}" data-secret="${s}" ${hc.explicit.has(s)?'checked':''}>
+            <span style="font-family:var(--mono); color:var(--text);">${s}</span>
+          </label>
+        `).join('')}
+      </div>
+    </div>
+  `).join('');
+
+  el.querySelectorAll('.hop-mode-select').forEach(sel=>{
+    sel.addEventListener('change', ()=>{
+      hopConfigs[+sel.dataset.idx].mode = sel.value;
+      renderHopConfig();
+      runSecretsTrace();
+    });
+  });
+  el.querySelectorAll('.hop-explicit-cb').forEach(cb=>{
+    cb.addEventListener('change', ()=>{
+      const idx = +cb.dataset.idx;
+      const secret = cb.dataset.secret;
+      if (cb.checked) hopConfigs[idx].explicit.add(secret);
+      else hopConfigs[idx].explicit.delete(secret);
+      runSecretsTrace();
+    });
+  });
+}
+
+function runSecretsTrace(){
+  const levels = [Array.from(rootSecretsChecked)];
+  hopConfigs.forEach((hc, i)=>{
+    const prev = levels[i];
+    let received;
+    if (hc.mode === 'inherit') received = prev.slice();
+    else if (hc.mode === 'explicit') received = prev.filter(s => hc.explicit.has(s));
+    else received = [];
+    levels.push(received);
+  });
+  renderSecretsTrace(levels);
+}
+
+function renderSecretsTrace(levels){
+  const el = document.getElementById('secrets-trace');
+  const blocks = levels.map((secrets, i)=>{
+    const label = i===0 ? 'Root workflow (its own scope)' : `Hop ${i} receives`;
+    const list = secrets.length
+      ? secrets.map(s=>`<span style="color:var(--green); font-family:var(--mono); font-size:12.5px;">✓ ${s}</span>`).join('<br>')
+      : '<span style="color:var(--red); font-family:var(--mono); font-size:12.5px;">— none —</span>';
+    return `<div class="stagebox"><div class="step-label">${label}</div><div>${list}</div></div>`;
+  }).join('');
+
+  const deepest = levels[levels.length-1];
+  const deepestSummary = deepest.length
+    ? `The deepest workflow in this chain can use: <strong>${deepest.join(', ')}</strong>.`
+    : `The deepest workflow in this chain has <strong>no secrets available</strong> — even if it references <code>secrets.API_KEY</code>, it resolves empty.`;
+
+  const capWarning = (levels.length - 1) >= 4
+    ? `<p class="note warn">⚠ ${levels.length - 1} hops reaches the 4-level workflow_call nesting cap — a 5th hop would be rejected outright.</p>`
+    : '';
+
+  el.innerHTML = blocks + `<div class="note">${deepestSummary} <br><span style="color:var(--text-faint);">Reminder: this traces <code>secrets:</code> at each call site only — a job with its own <code>environment:</code> pulls that environment's secrets directly, bypassing this chain entirely (Chapter 2).</span></div>${capWarning}`;
+}
+
+document.getElementById('secrets-hop-count').addEventListener('change', (e)=>{
+  initHopConfigs(+e.target.value);
+  renderHopConfig();
+  runSecretsTrace();
+});
+
+renderRootSecrets();
+initHopConfigs(+document.getElementById('secrets-hop-count').value);
+renderHopConfig();
+runSecretsTrace();
+
+/* ---------------------------------------------------------
+   MODULE 5 — PULL_REQUEST vs PULL_REQUEST_TARGET SIMULATOR
+--------------------------------------------------------- */
+function simulatePRT(){
+  const event = document.getElementById('prt-event').value;
+  const isFork = document.getElementById('prt-fork-toggle').checked;
+  const headCheckout = document.getElementById('prt-checkout-toggle').checked;
+  const executes = document.getElementById('prt-execute-toggle').checked;
+
+  const forkFloor = (event === 'pull_request') && isFork;
+
+  let tokenDesc, tokenSafe;
+  if (forkFloor) {
+    tokenDesc = 'Read-only, no secrets — GitHub\'s hardcoded floor for fork PRs under plain pull_request. No permissions: block can override this.';
+    tokenSafe = true;
+  } else if (isFork) {
+    tokenDesc = 'Full base-repo GITHUB_TOKEN permissions and secrets — pull_request_target does NOT apply the fork-PR floor, even though the PR author is untrusted.';
+    tokenSafe = false;
+  } else {
+    tokenDesc = 'Full base-repo GITHUB_TOKEN permissions and secrets — this is a same-repo contributor, not a fork, so nothing untrusted is involved.';
+    tokenSafe = true;
+  }
+
+  let checkoutIsForkCode, checkoutDesc;
+  if (event === 'pull_request_target') {
+    checkoutIsForkCode = isFork && headCheckout;
+    checkoutDesc = headCheckout
+      ? (isFork ? "the PR's head commit — fork-controlled code" : "the PR's head commit (same-repo branch, already trusted)")
+      : "the base branch only — the default ref for pull_request_target does NOT include the PR's changes unless you explicitly set ref: to the head SHA";
+  } else {
+    checkoutIsForkCode = isFork;
+    checkoutDesc = isFork
+      ? "a merge commit that includes the fork's changes — this is the default ref for pull_request"
+      : "a merge commit from a same-repo branch — no untrusted content involved";
+  }
+
+  const danger = isFork && checkoutIsForkCode && executes && !tokenSafe;
+
+  renderPRT({tokenDesc, tokenSafe, checkoutDesc, checkoutIsForkCode, executes, isFork, danger});
+}
+
+function renderPRT(r){
+  const resultEl = document.getElementById('prt-result');
+  resultEl.innerHTML = `
+    <div class="result-row"><span>Token &amp; secrets</span><span class="status" style="color:${r.tokenSafe ? 'var(--green)' : 'var(--red)'};">${r.tokenSafe ? '✓ contained' : '✗ elevated'}</span></div>
+    <div class="result-row"><span>Code actually checked out</span><span class="status" style="color:${r.checkoutIsForkCode ? 'var(--red)' : 'var(--green)'};">${r.checkoutIsForkCode ? '✗ fork-controlled' : '✓ trusted'}</span></div>
+    <div class="result-row"><span>That code gets executed</span><span class="status" style="color:${r.executes ? 'var(--amber)' : 'var(--text-faint)'};">${r.executes ? 'yes' : 'no'}</span></div>
+  `;
+
+  const noteEl = document.getElementById('prt-note');
+  let verdictHtml;
+  if (r.danger) {
+    verdictHtml = `
+      <div class="verdict docker" style="margin-top:4px;">
+        <h3 style="color:var(--red);">🔴 Danger — the exam's #1 anti-pattern</h3>
+        <p>${r.tokenDesc} This job also checks out and runs ${r.checkoutDesc} — an attacker opening a PR from a fork controls exactly what that code does, and it now runs with your base repo's real token and secrets.</p>
+        <div class="caveat">Fix: split into two workflows — a plain <code>pull_request</code> job (safe, floored token) that builds/tests and uploads an artifact, plus a separate <code>workflow_run</code> job (elevated token, but only ever touches your own trusted code) that downloads that artifact and does the privileged work. Never let "runs with real permissions" and "executes fork-controlled code" land in the same job.</div>
+      </div>`;
+  } else if (r.tokenSafe && r.isFork && r.checkoutIsForkCode) {
+    verdictHtml = `
+      <div class="verdict composite" style="margin-top:4px;">
+        <h3 style="color:var(--green);">✅ Safe — GitHub's hardcoded floor contains it</h3>
+        <p>${r.tokenDesc} Even though the fork's own code is what's checked out and run, there's nothing of value here for an attacker to steal — no write access, no secrets.</p>
+      </div>`;
+  } else if (r.isFork) {
+    verdictHtml = `
+      <div class="verdict composite" style="margin-top:4px;">
+        <h3 style="color:var(--green);">✅ Safe — privilege and untrusted code never meet</h3>
+        <p>${r.tokenDesc} But the code actually checked out and run is ${r.checkoutDesc} — not the fork's. This is the standard safe <code>pull_request_target</code> pattern: use the elevated token to label, comment, or triage, without ever executing anything the PR author controls.</p>
+      </div>`;
+  } else {
+    verdictHtml = `
+      <div class="verdict composite" style="margin-top:4px;">
+        <h3 style="color:var(--green);">✅ Safe — no untrusted party involved</h3>
+        <p>This PR comes from a branch on the same repo, not a fork, so there's no attacker-controlled input crossing a trust boundary here regardless of the other settings.</p>
+      </div>`;
+  }
+  noteEl.innerHTML = verdictHtml;
+}
+
+['prt-event'].forEach(id => document.getElementById(id).addEventListener('change', simulatePRT));
+['prt-fork-toggle','prt-checkout-toggle','prt-execute-toggle'].forEach(id => document.getElementById(id).addEventListener('change', simulatePRT));
+simulatePRT();
+
+/* ---------------------------------------------------------
+   MODULE 6 — SESSION-ONLY PROGRESS TRACKER
+   (in-memory only — resets on reload, never persisted anywhere)
+--------------------------------------------------------- */
+const progressState = { perms:false, matrix:false, action:false, secrets:false, prtarget:false };
+
+function renderProgress(){
+  document.querySelectorAll('.progress-pill').forEach(pill=>{
+    pill.classList.toggle('done', !!progressState[pill.dataset.key]);
+  });
+  const doneCount = Object.values(progressState).filter(Boolean).length;
+  document.getElementById('progress-count').textContent = `${doneCount}/5 modules exercised`;
+}
+
+function markExercised(key){
+  if (!progressState[key]) {
+    progressState[key] = true;
+    renderProgress();
+  }
+}
+
+Object.keys(progressState).forEach(key=>{
+  const panel = document.getElementById('panel-' + key);
+  ['input','change','click'].forEach(evt=>{
+    panel.addEventListener(evt, ()=>markExercised(key));
+  });
+});
+
+renderProgress();
+</script>
+</body>
+</html>

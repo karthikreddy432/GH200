@@ -1,0 +1,776 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GH-200 Practice Run</title>
+<style>
+  :root{
+    --paper:#F5F5F2;
+    --panel:#FFFFFF;
+    --ink:#1B1F23;
+    --ink-soft:#57606A;
+    --line:#D8DCE1;
+    --blue:#1F6FEB;
+    --blue-soft:#DDEBFF;
+    --green:#1A7F37;
+    --green-soft:#DAF3E1;
+    --red:#CF222E;
+    --red-soft:#FDE7E8;
+    --amber:#9A6700;
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:var(--sans);
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:760px;margin:0 auto;padding:28px 18px 64px;}
+
+  /* ---- run header ---- */
+  .run-header{
+    display:flex;align-items:baseline;justify-content:space-between;
+    margin-bottom:18px;
+  }
+  .run-title{font-size:15px;font-weight:700;letter-spacing:-0.01em;}
+  .run-title .id{color:var(--ink-soft);font-weight:500;font-family:var(--mono);font-size:13px;}
+  .run-sub{color:var(--ink-soft);font-size:12.5px;}
+
+  /* ---- pipeline tracker ---- */
+  .tracker{
+    display:flex;
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:14px 16px;
+    margin-bottom:20px;
+    overflow-x:auto;
+    gap:0;
+  }
+  .node{
+    display:flex;flex-direction:column;align-items:center;
+    flex:1;min-width:64px;position:relative;
+  }
+  .node .dot{
+    width:22px;height:22px;border-radius:50%;
+    border:2px solid var(--line);
+    background:var(--panel);
+    display:flex;align-items:center;justify-content:center;
+    font-size:11px;font-weight:700;color:var(--ink-soft);
+    z-index:1;
+  }
+  .node .connector{
+    position:absolute;top:11px;left:50%;width:100%;height:2px;
+    background:var(--line);z-index:0;
+  }
+  .node:first-child .connector{display:none;}
+  .node .label{
+    margin-top:6px;font-size:9.5px;color:var(--ink-soft);
+    text-align:center;line-height:1.25;max-width:78px;
+  }
+  .node.done .dot{background:var(--green);border-color:var(--green);color:#fff;}
+  .node.done .connector{background:var(--green);}
+  .node.current .dot{background:var(--blue);border-color:var(--blue);color:#fff;box-shadow:0 0 0 3px var(--blue-soft);}
+  .node.current .label{color:var(--ink);font-weight:600;}
+  .node.done .label{color:var(--ink);}
+
+  /* ---- progress line ---- */
+  .progress-row{
+    display:flex;justify-content:space-between;align-items:center;
+    font-size:12px;color:var(--ink-soft);margin-bottom:8px;
+  }
+  .progress-track{
+    height:6px;background:var(--line);border-radius:4px;overflow:hidden;margin-bottom:20px;
+  }
+  .progress-fill{height:100%;background:var(--blue);border-radius:4px;transition:width .3s ease;}
+
+  /* ---- question card ---- */
+  .card{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:22px 22px 20px;
+  }
+  .domain-chip{
+    display:inline-block;
+    font-family:var(--mono);
+    font-size:10.5px;
+    letter-spacing:.02em;
+    color:var(--blue);
+    background:var(--blue-soft);
+    padding:3px 8px;
+    border-radius:5px;
+    margin-bottom:14px;
+  }
+  .qtext{
+    font-size:16.5px;
+    font-weight:600;
+    line-height:1.5;
+    margin:0 0 16px;
+    letter-spacing:-0.005em;
+  }
+  .qtext code, .qtext pre code{font-family:var(--mono);font-weight:600;}
+  pre.snippet{
+    background:#0F1720;
+    color:#D7E1EA;
+    font-family:var(--mono);
+    font-size:12.5px;
+    line-height:1.55;
+    padding:14px 16px;
+    border-radius:8px;
+    overflow-x:auto;
+    margin:0 0 16px;
+    white-space:pre;
+  }
+  .options{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;}
+  .opt{
+    border:1.5px solid var(--line);
+    border-radius:9px;
+    padding:11px 14px;
+    font-size:14.5px;
+    line-height:1.4;
+    cursor:pointer;
+    display:flex;gap:10px;align-items:flex-start;
+    transition:border-color .12s ease, background .12s ease;
+    background:var(--panel);
+  }
+  .opt:hover{border-color:var(--blue);}
+  .opt .letter{
+    font-family:var(--mono);font-size:12px;font-weight:700;
+    color:var(--ink-soft);flex-shrink:0;margin-top:1px;
+  }
+  .opt.selected{border-color:var(--blue);background:var(--blue-soft);}
+  .opt.correct{border-color:var(--green);background:var(--green-soft);}
+  .opt.correct .letter{color:var(--green);}
+  .opt.incorrect{border-color:var(--red);background:var(--red-soft);}
+  .opt.incorrect .letter{color:var(--red);}
+  .opt.disabled{cursor:default;}
+  .opt.dimmed{opacity:.55;}
+
+  .feedback{
+    margin-top:16px;
+    padding:14px 16px;
+    border-radius:9px;
+    font-size:13.5px;
+    line-height:1.55;
+    display:none;
+  }
+  .feedback.show{display:block;}
+  .feedback.correct-fb{background:var(--green-soft);border:1px solid #B7E4C2;}
+  .feedback.incorrect-fb{background:var(--red-soft);border:1px solid #F3C6C8;}
+  .feedback .fb-title{font-weight:700;margin-bottom:5px;font-size:13px;}
+  .feedback.correct-fb .fb-title{color:var(--green);}
+  .feedback.incorrect-fb .fb-title{color:var(--red);}
+  .feedback .fb-body{color:var(--ink);}
+
+  .actions-row{
+    display:flex;justify-content:flex-end;margin-top:20px;
+  }
+  button.next-btn{
+    background:var(--ink);
+    color:#fff;
+    border:none;
+    font-family:var(--sans);
+    font-size:13.5px;
+    font-weight:600;
+    padding:10px 20px;
+    border-radius:8px;
+    cursor:pointer;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .15s ease;
+  }
+  button.next-btn.show{opacity:1;pointer-events:auto;}
+  button.next-btn:hover{background:#000;}
+
+  /* ---- start / results screens ---- */
+  .intro-card, .results-card{
+    background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    padding:32px 28px;text-align:center;
+  }
+  .intro-card h1{font-size:22px;margin:0 0 8px;letter-spacing:-0.02em;}
+  .intro-card p{color:var(--ink-soft);font-size:14px;line-height:1.6;max-width:480px;margin:0 auto 22px;}
+  .weight-table{
+    text-align:left;width:100%;border-collapse:collapse;margin:0 0 24px;font-size:13px;
+  }
+  .weight-table th{
+    text-align:left;color:var(--ink-soft);font-weight:600;font-size:11px;
+    text-transform:none;padding:6px 4px;border-bottom:1px solid var(--line);
+  }
+  .weight-table td{padding:8px 4px;border-bottom:1px solid #EEF0F2;}
+  .weight-table td:last-child, .weight-table th:last-child{text-align:right;font-family:var(--mono);}
+  button.start-btn{
+    background:var(--blue);color:#fff;border:none;font-family:var(--sans);
+    font-size:14.5px;font-weight:700;padding:13px 28px;border-radius:9px;cursor:pointer;
+  }
+  button.start-btn:hover{background:#1861CE;}
+
+  .score-circle{
+    width:140px;height:140px;border-radius:50%;margin:0 auto 18px;
+    display:flex;align-items:center;justify-content:center;flex-direction:column;
+    background:conic-gradient(var(--blue) calc(var(--pct)*1%), #EBEDEF 0);
+    position:relative;
+  }
+  .score-circle::before{
+    content:"";position:absolute;inset:10px;border-radius:50%;background:var(--panel);
+  }
+  .score-circle .num{position:relative;font-size:28px;font-weight:800;letter-spacing:-0.02em;}
+  .score-circle .lab{position:relative;font-size:11px;color:var(--ink-soft);}
+
+  .domain-breakdown{text-align:left;margin-top:8px;}
+  .db-row{
+    display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid #EEF0F2;
+  }
+  .db-row:last-child{border-bottom:none;}
+  .db-name{flex:1;font-size:13px;font-weight:600;}
+  .db-bar-track{width:110px;height:6px;background:#EBEDEF;border-radius:4px;overflow:hidden;}
+  .db-bar-fill{height:100%;background:var(--green);}
+  .db-bar-fill.weak{background:var(--amber);}
+  .db-bar-fill.poor{background:var(--red);}
+  .db-score{width:52px;text-align:right;font-family:var(--mono);font-size:12.5px;color:var(--ink-soft);}
+
+  button.restart-btn{
+    margin-top:24px;background:none;border:1.5px solid var(--line);color:var(--ink);
+    font-family:var(--sans);font-size:13.5px;font-weight:600;padding:10px 20px;
+    border-radius:8px;cursor:pointer;
+  }
+  button.restart-btn:hover{border-color:var(--ink);}
+  button#reviewMissedBtn{
+    background:var(--ink);color:var(--paper,#fff);border-color:var(--ink);margin-right:10px;
+  }
+  button#reviewMissedBtn:hover{opacity:0.85;}
+
+  .hidden{display:none !important;}
+
+  @media (max-width:480px){
+    .node .label{display:none;}
+    .qtext{font-size:15.5px;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- ===================== INTRO ===================== -->
+  <div id="intro" class="intro-card">
+    <h1>GH-200 Practice Run</h1>
+    <p>80 questions pulled from your six chapters, weighted to match the real exam's domain split. Every wrong answer is explained, and most distractors are drawn straight from your "Common Mistakes" sections — so a miss here should look familiar.</p>
+    <table class="weight-table">
+      <tr><th>Domain</th><th>Questions</th></tr>
+      <tr><td>Foundations (warm-up, unweighted)</td><td>5</td></tr>
+      <tr><td>Author &amp; Manage Workflows</td><td>20</td></tr>
+      <tr><td>Consume &amp; Troubleshoot Workflows</td><td>14</td></tr>
+      <tr><td>Author &amp; Maintain Actions</td><td>14</td></tr>
+      <tr><td>Manage for the Enterprise</td><td>18</td></tr>
+      <tr><td>Secure &amp; Optimize Automation</td><td>9</td></tr>
+    </table>
+    <button class="start-btn" onclick="startQuiz()">Start the run →</button>
+  </div>
+
+  <!-- ===================== QUIZ ===================== -->
+  <div id="quiz" class="hidden">
+    <div class="run-header">
+      <div class="run-title">GH-200 Practice Run <span class="id">#1</span></div>
+      <div class="run-sub" id="qcounter">Question 1 / 80</div>
+    </div>
+
+    <div class="tracker" id="tracker"></div>
+
+    <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+
+    <div class="card">
+      <div class="domain-chip" id="domainChip">DOMAIN</div>
+      <div class="qtext" id="qtext"></div>
+      <pre class="snippet hidden" id="snippet"></pre>
+      <ul class="options" id="options"></ul>
+      <div class="feedback" id="feedback">
+        <div class="fb-title" id="fbTitle"></div>
+        <div class="fb-body" id="fbBody"></div>
+      </div>
+      <div class="actions-row">
+        <button class="next-btn" id="nextBtn" onclick="nextQuestion()">Next →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== RESULTS ===================== -->
+  <div id="results" class="results-card hidden">
+    <div class="score-circle" id="scoreCircle" style="--pct:0">
+      <div class="num" id="scoreNum">0%</div>
+      <div class="lab">overall</div>
+    </div>
+    <h1 id="resultsTitle">Run complete</h1>
+    <p id="resultsSub"></p>
+    <div class="domain-breakdown" id="breakdown"></div>
+    <button class="restart-btn hidden" id="reviewMissedBtn" onclick="reviewMissed()"></button>
+    <button class="restart-btn" onclick="restartQuiz()">Run it again</button>
+  </div>
+
+</div>
+
+<script>
+/* ============================================================
+   QUESTION BANK
+   ============================================================ */
+const DOMAINS = {
+  foundations:   { label: "Foundations",                         short: "FND", weighted: false },
+  workflows:     { label: "Author & Manage Workflows",           short: "AMW", weighted: true },
+  troubleshoot:  { label: "Consume & Troubleshoot Workflows",    short: "CTW", weighted: true },
+  actions:       { label: "Author & Maintain Actions",           short: "AMA", weighted: true },
+  enterprise:    { label: "Manage for the Enterprise",           short: "ENT", weighted: true },
+  security:      { label: "Secure & Optimize Automation",        short: "SEC", weighted: true },
+};
+
+const QUESTIONS = [
+// ---------------- FOUNDATIONS (5) ----------------
+{d:"foundations", q:"What is the correct nesting order of GitHub Actions concepts, from largest to smallest?",
+ o:["Workflow → Job → Step → Action","Job → Workflow → Action → Step","Action → Step → Job → Workflow","Step → Action → Workflow → Job"],
+ c:0, e:"A repository holds workflows; a workflow (triggered by an event) contains jobs; a job contains steps; a step either runs a shell command or calls a packaged action. 🔗 <a href='00_chapter_foundations.md#01-the-core-vocabulary' target='_blank'>Related diagram: Chapter 0 §0.1 (hierarchy diagram)</a>."},
+{d:"foundations", q:"By default, how do multiple jobs in the same workflow execute relative to each other?",
+ o:["Sequentially, in the order they're declared","In parallel, unless a job specifies needs:","Randomly, GitHub chooses the order","Only one job runs per workflow trigger"],
+ c:1, e:"Jobs run in parallel by default. Adding needs: to a job forces it to wait for the listed job(s) to finish first. 🔗 <a href='00_chapter_foundations.md#01-the-core-vocabulary' target='_blank'>Related diagram: Chapter 0 §0.1 (hierarchy diagram)</a>."},
+{d:"foundations", q:"A `test` job writes a file to disk, and a later `build` job (with `needs: test`) can't find it. What's the most likely explanation?",
+ o:["The file was deleted by a cleanup step","Each job runs on a fresh, isolated runner — nothing persists across jobs unless explicitly passed","needs: only controls job order, not job execution at all","This is a bug in GitHub Actions"],
+ c:1, e:"Every job gets its own fresh runner. Data must be passed explicitly via artifacts, cache, or job outputs — nothing on disk carries over automatically, even with needs:."},
+{d:"foundations", q:"Why does actions/checkout@v4 almost always need to be the first step in a job?",
+ o:["It installs Node.js on the runner","A fresh runner starts with an empty filesystem — checkout is what clones your repo onto it","It sets required environment variables for later steps","It is required by GitHub's terms of service"],
+ c:1, e:"Runners start empty. If a later step (like npm install) needs your repo's files, checkout must run first, or that step fails against a nonexistent file."},
+{d:"foundations", q:"What's the practical implication of ubuntu-latest being a moving label rather than a fixed version?",
+ o:["It has no practical implication — the label never changes","Workflows needing a reproducible environment should pin an explicit version like ubuntu-24.04","ubuntu-latest workflows cannot use actions/checkout","It only affects self-hosted runners"],
+ c:1, e:"ubuntu-latest currently resolves to Ubuntu 24.04, but that mapping moves over time (e.g., ubuntu-22.04 entering deprecation). Pin an explicit version if you need reproducibility."},
+
+// ---------------- AUTHOR & MANAGE WORKFLOWS (20) ----------------
+{d:"workflows", q:"By default, which event types does a `pull_request` trigger fire on if `types:` is not specified?",
+ o:["All PR event types, including labeled and closed","opened, synchronize, and reopened only","opened only","Every push to the PR branch, regardless of PR state"],
+ c:1, e:"pull_request defaults to opened, synchronize, reopened. A common mistake is expecting it to also fire on labeled without adding that type explicitly."},
+{d:"workflows", q:"A team wants a nightly `schedule` job to run at exactly 3:00 AM in their local timezone. What should they know about `schedule:` cron?",
+ o:["Cron times in schedule: are always UTC, and GitHub explicitly notes scheduled runs can be delayed under high load","Cron times respect the repository's configured timezone automatically","Scheduled workflows are guaranteed to start at the exact second specified","schedule: cannot be combined with other triggers in the same workflow"],
+ c:0, e:"schedule cron is always UTC and is not a real-time guarantee — GitHub states runs can be delayed during high load."},
+{d:"workflows", q:"Which `on:` configuration correctly skips a workflow for documentation-only changes?",
+ o:["paths: ['!**.md']","paths-ignore: ['**.md', 'docs/**']","branches-ignore: ['**.md']","exclude-paths: ['docs/**']"],
+ c:1, e:"paths-ignore (or paths: with a leading ! to negate) filters out changes touching only the listed patterns before any job is even considered."},
+{d:"workflows", q:"How many typed inputs can a single workflow_dispatch trigger define, and what are the valid types?",
+ o:["Unlimited inputs; only string and boolean types exist","Max 10 inputs; types are string, number, boolean, choice, environment","Max 5 inputs; types are string and number only","Max 20 inputs; any YAML type is valid"],
+ c:1, e:"workflow_dispatch supports exactly five input types (string, number, boolean, choice, environment) with a hard cap of 10 inputs per trigger."},
+{d:"workflows", q:"What makes the `type: environment` workflow_dispatch input special compared to `type: choice`?",
+ o:["It behaves identically to choice — just a naming convention","It renders a dropdown of the repo's actual configured Environments, and environment protection rules are enforced when that value is used as the job's environment:","It can only be used with self-hosted runners","It requires an enterprise plan"],
+ c:1, e:"type: environment ties the manual input directly to real Environments and their approval/protection rules — a mechanism connecting dispatch inputs to approval gates."},
+{d:"workflows", q:"A job has `if: inputs.dry_run == false` where dry_run is a workflow_dispatch boolean input. Inside a later `run:` step, the same value is referenced as `${{ inputs.dry_run }}`. What's true about how this value behaves in each context?",
+ o:["It's a string in both contexts","It's a real boolean in the if: expression context, but a literal string \"true\"/\"false\" once interpolated inside a run: shell block","It's a real boolean in both contexts","It's undefined inside run: blocks"],
+ c:1, e:"This is a classic exam trap: inputs.dry_run is a genuine boolean in if: expression syntax, but becomes the literal text \"true\"/\"false\" once dropped into a run: shell block."},
+{d:"workflows", q:"A repository variable and a repository secret both store the string \"us-east-1\". What's the key practical difference?",
+ o:["There is no difference — vars and secrets behave identically","vars values are plaintext and visible in the UI; secrets are encrypted at rest and masked in logs","secrets can only be used in reusable workflows","vars are only available to self-hosted runners"],
+ c:1, e:"vars is for non-sensitive plaintext config (fine to be visible); secrets are encrypted and masked in logs. Storing a sensitive value in vars by mistake can leak it in plaintext logs."},
+{d:"workflows", q:"What is the current, non-deprecated way to set a step output for use by later steps or jobs?",
+ o:["echo \"::set-output name=x::value\"","Writing to the $GITHUB_OUTPUT environment file, e.g. echo \"x=value\" >> \"$GITHUB_OUTPUT\"","Setting a workflow-level env: variable","Using core.export() inside a run: block"],
+ c:1, e:"::set-output is deprecated and was disabled for security reasons. The current mechanism is appending key=value to the $GITHUB_OUTPUT file."},
+{d:"workflows", q:"Job A sets a step output via $GITHUB_OUTPUT, but Job B (needs: A) can't see it via needs.A.outputs.x, even though the step itself ran correctly. What's missing?",
+ o:["Job B needs a permissions: block","Job A must declare a job-level outputs: map that references steps.<id>.outputs.x — step outputs aren't visible outside their own job otherwise","Outputs can never cross job boundaries under any configuration","Job A's step needs a shell: declaration"],
+ c:1, e:"Step outputs (steps.<id>.outputs.x) are scoped to that job only. To expose them to other jobs via needs.<job>.outputs, the producing job must explicitly declare a job-level outputs: mapping."},
+{d:"workflows", q:"If an upstream job listed in needs: fails, what happens to the downstream job by default?",
+ o:["It runs anyway, ignoring the failure","It is skipped — the default implicit condition is success()","It retries the upstream job automatically","It runs but is marked as a warning"],
+ c:1, e:"Downstream jobs have an implicit if: success() condition, so a failed upstream dependency causes them to be skipped, not run, by default. 🔗 <a href='01_chapter_author_manage_workflows.md#14-job-dependencies-conditionals-and-execution-control' target='_blank'>Related diagram: Chapter 1 §1.4 (job dependency graph)</a>."},
+{d:"workflows", q:"You want a cleanup/notification job to run regardless of whether upstream jobs succeeded, failed, or were cancelled. Which condition function should you use?",
+ o:["success()","failure()","cancelled()","always()"],
+ c:3, e:"always() runs the job/step unconditionally regardless of upstream status — the standard pattern for cleanup or notification steps. 🔗 <a href='01_chapter_author_manage_workflows.md#14-job-dependencies-conditionals-and-execution-control' target='_blank'>Related diagram: Chapter 1 §1.4 (job dependency graph)</a>."},
+{d:"workflows", q:"You have unit-tests and integration-tests with no dependency on each other, followed by build-image needing both, followed by push-image which should run only after build-image succeeds on pushes to main. How do you express 'build-image waits for BOTH test jobs'?",
+ o:["needs: unit-tests\\nneeds: integration-tests (two separate needs: keys)","needs: [unit-tests, integration-tests]","if: unit-tests.result == 'success' && integration-tests.result == 'success'","strategy: matrix: [unit-tests, integration-tests]"],
+ c:1, e:"needs: accepts a list — needs: [unit-tests, integration-tests] waits for both to succeed before build-image starts. Omitting needs: entirely on the two test jobs is what lets them run in parallel."},
+{d:"workflows", q:"Given a matrix with os: [ubuntu-latest, windows-latest] and python: ['3.10','3.11','3.12'], with exclude: removing (windows, 3.10), and include: adding (macos-latest, 3.12), how many jobs actually run?",
+ o:["5","6","7","9"],
+ c:1, e:"Base Cartesian product = 2×3 = 6. exclude removes (windows,3.10) → 5. include then adds a brand-new (macos-latest,3.12) combination outside the original grid → 6 total. exclude always applies before include. 🔗 <a href='01_chapter_author_manage_workflows.md#15-matrix-builds' target='_blank'>Related diagram: Chapter 1 §1.5 (matrix expansion)</a> — or try the <a href='08_interactive_companion.html#matrix' target='_blank'>Interactive Companion's Matrix Math tab</a> with these exact numbers."},
+{d:"workflows", q:"What does `fail-fast` default to in a matrix strategy, and what does it control?",
+ o:["Defaults to false; controls whether the matrix runs in parallel","Defaults to true; one matrix job failing cancels all other in-progress/queued matrix jobs","Defaults to true; it stops the entire workflow, not just the matrix","There is no default — it must always be set explicitly"],
+ c:1, e:"fail-fast defaults to true. Set it to false explicitly if you want every matrix combination's result, which is common during debugging."},
+{d:"workflows", q:"What is the hard cap on the number of jobs a single matrix strategy can generate?",
+ o:["50","100","256","1000"],
+ c:2, e:"GitHub Actions caps a matrix at 256 generated jobs. Exceeding this requires restructuring the matrix or splitting across multiple reusable workflow calls. 🔗 <a href='01_chapter_author_manage_workflows.md#15-matrix-builds' target='_blank'>Related diagram: Chapter 1 §1.5 (matrix expansion)</a>."},
+{d:"workflows", q:"An integration-test job intermittently fails with 'connection refused' against a Postgres service container, especially on fresh runs. What's the most likely missing piece?",
+ o:["The service is missing a ports: mapping","The service is missing a health-check in options: (e.g. --health-cmd pg_isready), so steps can start before Postgres is ready to accept connections","The job needs actions/checkout before the services: block","Service containers require self-hosted runners"],
+ c:1, e:"Without a health check, GitHub Actions has no way to know Postgres isn't ready yet — the container starting isn't the same as the database accepting connections. Health-check options close this race condition."},
+{d:"workflows", q:"Which statement about service containers (services:) is accurate?",
+ o:["They work identically on Windows, macOS, and Linux hosted runners","They are torn down automatically when the job ends, and are only supported the same way on Linux runners (not Windows/macOS)","They persist across all jobs in a workflow","They require a self-hosted runner"],
+ c:1, e:"Service containers rely on Docker networking available natively on GitHub-hosted Linux runners. They aren't supported the same way on Windows/macOS runners, and they're always cleaned up automatically at job end."},
+{d:"workflows", q:"A workflow needs its job to comment on a pull request. Per least-privilege guidance, what's the minimum permission it should request?",
+ o:["contents: write","issues: write","pull-requests: write","permissions: write-all"],
+ c:2, e:"Commenting on a PR requires pull-requests: write specifically — not the broader contents: write or a blanket write-all grant."},
+{d:"workflows", q:"Setting permissions: at the workflow level (top of the YAML file) has what scope?",
+ o:["It applies only to the first job","It applies to all jobs, unless a specific job defines its own permissions: block that overrides it for that job","It has no effect — permissions must always be set per-job","It only affects reusable workflow calls"],
+ c:1, e:"Workflow-level permissions: apply to every job by default; an individual job can override this with its own permissions: block."},
+{d:"workflows", q:"What triggers a workflow via repository_dispatch?",
+ o:["A scheduled cron firing","A manual click of 'Run workflow' in the UI","An external system sending a POST request to the GitHub API","A push to any branch"],
+ c:2, e:"repository_dispatch lets external systems (outside GitHub) trigger a workflow by hitting the GitHub API — useful for triggering CI from an outside tool or pipeline."},
+
+// ---------------- CONSUME & TROUBLESHOOT WORKFLOWS (14) ----------------
+{d:"troubleshoot", q:"A workflow run shows a red ❌. What is the recommended, systematic first move?",
+ o:["Immediately re-run the whole workflow with debug logging enabled","Find the failed job, then expand the specific failed step, then read the log carefully above the generic error line before assuming the cause","Delete and recreate the workflow file","Check the repository's billing page"],
+ c:1, e:"The systematic path is: red job → red step → read the log (the real error is often buried above a generic 'exit code 1' summary) before jumping to conclusions. 🔗 <a href='02_chapter_consume_troubleshoot_workflows.md#21-a-systematic-debugging-workflow' target='_blank'>Related diagram: Chapter 2 §2.1 (systematic debugging flow)</a>."},
+{d:"troubleshoot", q:"Which two repository secrets, when set to 'true', enable verbose debug logging for troubleshooting?",
+ o:["DEBUG_MODE and VERBOSE_LOGS","ACTIONS_STEP_DEBUG and ACTIONS_RUNNER_DEBUG","GITHUB_DEBUG and RUNNER_DEBUG","LOG_LEVEL and TRACE_ENABLED"],
+ c:1, e:"ACTIONS_STEP_DEBUG (per-step verbose logs) and ACTIONS_RUNNER_DEBUG (runner-level verbose logs) are the two actual repository secrets that unlock debug logging."},
+{d:"troubleshoot", q:"A step fails with 'Resource not accessible by integration'. What should you check first?",
+ o:["The runner's operating system","The permissions: block — the GITHUB_TOKEN likely lacks the scope the step needs","The matrix configuration","Whether actions/checkout ran"],
+ c:1, e:"This specific error signature almost always means GITHUB_TOKEN doesn't have the permission scope the API call requires — check permissions: at the workflow/job level."},
+{d:"troubleshoot", q:"A job shows as grey/'Skipped' rather than red. What does this most likely mean?",
+ o:["The job crashed the runner","An upstream needs: job failed, or the job's own if: condition evaluated false — this is expected behavior, not necessarily a bug","GitHub's servers were down during the run","The job's YAML has a syntax error"],
+ c:1, e:"Skipped is not a failure signal by itself. It typically means either an upstream dependency failed or an if: condition evaluated false — the workflow's control flow working as designed."},
+{d:"troubleshoot", q:"What are the default size and idle-eviction rules for GitHub Actions caching (per repository)?",
+ o:["Unlimited size, never evicted","10 GB limit by default, with caches unused for 7 days automatically evicted","1 GB limit, evicted after 30 days","5 GB limit, never evicted regardless of use"],
+ c:1, e:"The default cache limit is 10 GB per repository (least-recently-used entries evicted once over), and any cache unused for 7 days is evicted regardless of the size limit."},
+{d:"troubleshoot", q:"Why can't you 'update' an existing actions/cache entry under the same key?",
+ o:["It's a UI limitation only, not a real restriction","Caches are immutable once created by design — this guarantees safe, deterministic concurrent restores across parallel jobs; a new key (e.g. including a lockfile hash) is required for new content","GitHub charges extra for cache updates","Only enterprise accounts can update caches"],
+ c:1, e:"Cache immutability is deliberate: it guarantees a cache is deterministic and safe for multiple parallel jobs to restore simultaneously without risk of a corrupted, mid-write read."},
+{d:"troubleshoot", q:"What does restore-keys provide, and when is cache-hit set to 'true'?",
+ o:["restore-keys gives an exact match only; cache-hit is always true if any restore-keys entry matches","restore-keys provides prefix-match fallback to the most recent cache with a matching prefix; cache-hit is 'true' only on an exact key match, not a restore-keys fallback","restore-keys and cache-hit are unrelated features","cache-hit is always false when using actions/cache@v4"],
+ c:1, e:"restore-keys lets you fall back to a 'close enough' prior cache via prefix matching, but cache-hit only reports 'true' on an exact key match — a partial restore-keys hit leaves it false/empty."},
+{d:"troubleshoot", q:"Which scenario correctly calls for artifacts rather than cache?",
+ o:["Speeding up repeated pip install runs across unrelated workflow runs over time","Passing a compiled binary from a build job to a deploy job that needs it to function correctly","Storing OS-specific temp files that don't matter if lost","Any data under 1 MB"],
+ c:1, e:"Anything correctness-critical for a downstream job — like a binary another job must have to function — belongs in artifacts, since cache is 'best effort' and may silently be missing. Cache is for speed optimizations only. 🔗 <a href='02_chapter_consume_troubleshoot_workflows.md#24-caching-vs-artifacts--choose-correctly' target='_blank'>Related diagram: Chapter 2 §2.4 (cache vs artifact decision)</a>."},
+{d:"troubleshoot", q:"What's the default retention period for artifacts uploaded with actions/upload-artifact, and is it adjustable?",
+ o:["7 days, fixed and non-adjustable","90 days, adjustable","24 hours, fixed","Artifacts never expire"],
+ c:1, e:"Artifacts default to 90 days of retention and this is configurable — distinct from cache's 7-day-idle/10GB eviction rules."},
+{d:"troubleshoot", q:"Where can a reusable workflow (workflow_call) be invoked from within a caller workflow?",
+ o:["Inside any steps: list, using uses:","Only at the job level, via jobs.<id>.uses: — never inside a steps: list","Only inside a composite action","At the top level of the YAML file, outside jobs:"],
+ c:1, e:"Reusable workflows are consumed at the job level (jobs.<id>.uses:). Calling reusable logic from inside a steps: list is what composite actions are for instead."},
+{d:"troubleshoot", q:"Workflow A calls reusable workflow B with `secrets: inherit`. B then calls reusable workflow C with no secrets: key at all. Does C receive A's secrets?",
+ o:["Yes, secrets: inherit cascades through the entire call chain automatically","No — secrets only pass one hop at a time; B must explicitly pass secrets (inherit or named) to C for C to receive them","Yes, but only if C is in the same repository as A","No, reusable workflows can never receive secrets under any configuration"],
+ c:1, e:"secrets: inherit only propagates one hop. B receiving A's secrets does not automatically forward them to C — B must explicitly declare secrets: inherit or an explicit mapping in its own call to C. 🔗 Try it: <a href='08_interactive_companion.html#secrets' target='_blank'>Interactive Companion → Secrets Tracer tab</a> — build this exact 2-hop chain and watch what C actually receives."},
+{d:"troubleshoot", q:"A reusable workflow's job specifies its own `environment: production`. The caller passed secrets explicitly. Which secrets does that job actually use?",
+ o:["The secrets explicitly passed by the caller, always","The production environment's own secrets — environment secrets do not flow through workflow_call the way caller-passed secrets do","A merge of both sets, caller-passed taking priority","Whichever secrets were used in the previous run"],
+ c:1, e:"This is a specifically tested gotcha: a job with its own environment: pulls that environment's secrets directly, regardless of what secrets the caller tried to pass in."},
+{d:"troubleshoot", q:"Rapid successive pushes are triggering overlapping deploy runs to the same environment, racing each other. What's the standard fix?",
+ o:["Add more self-hosted runners","concurrency: with a group: key and cancel-in-progress: true, so a new push cancels the older in-progress run for that group","Increase the matrix max-parallel setting","Switch the trigger from push to pull_request"],
+ c:1, e:"concurrency + cancel-in-progress: true ensures only one run per group is active — a newer push cancels the older, superseded one, preventing racing deploys."},
+{d:"troubleshoot", q:"You choose 'Re-run failed jobs only' instead of a full re-run. What's the tradeoff to be aware of?",
+ o:["It always produces identical results to a full re-run, no tradeoff exists","Already-succeeded jobs' prior results are reused as-is — if one of those succeeded jobs subtly produced bad output without technically failing, this option won't catch or fix that","It re-runs everything from scratch anyway, just faster","It permanently deletes the failed job's logs"],
+ c:1, e:"Re-running only failed jobs is faster but not a guaranteed clean-slate retry — succeeded jobs' outputs/artifacts are reused unchanged, even if they were subtly wrong without technically failing."},
+
+// ---------------- AUTHOR & MAINTAIN ACTIONS (14) ----------------
+{d:"actions", q:"As of the current runner lineup, what value should `runs: using:` have in a JavaScript action's action.yml?",
+ o:["node16","node20","node24","node-latest"],
+ c:2, e:"Node 20 was fully removed from GitHub-hosted runners (Node 24 became the forced default). Seeing node20 in any current action.yml should be treated as outdated."},
+{d:"actions", q:"What is a composite action best suited for, and what does it require in its runs: block?",
+ o:["Custom compiled logic; runs.using: 'node24'","Pure orchestration of existing steps/actions with no new logic; runs.using: 'composite', with every run: step required to declare shell: explicitly","Wrapping a specific Linux toolchain; runs.using: 'docker'","None of these — composite actions don't use a runs: block"],
+ c:1, e:"Composite actions bundle existing steps/actions with no custom logic of their own, using runs.using: 'composite'. Unlike normal workflow steps, every run: step inside must explicitly declare shell: — there's no inferred default. 🔗 <a href='03_chapter_author_maintain_actions.md#31-three-action-types--choosing-correctly' target='_blank'>Related diagram: Chapter 3 §3.1 (action type decision tree)</a> — or try the <a href='08_interactive_companion.html#action' target='_blank'>Interactive Companion's Action Type Picker tab</a>."},
+{d:"actions", q:"A composite action fails immediately on every runner. Its two run: steps have no shell: key. What's the bug?",
+ o:["Composite actions can't contain run: steps at all","shell: is mandatory on every run: step inside a composite action — GitHub does not infer a default shell there the way it does for normal workflow steps","The action is missing an outputs: block","The action needs a Dockerfile"],
+ c:1, e:"This is one of the most commonly tested composite-action gotchas: normal workflow steps get an inferred default shell (bash on Linux/macOS, pwsh on Windows), but composite action run: steps do not — shell: must be explicit on every one."},
+{d:"actions", q:"How does a composite action expose an output for the consuming workflow to use?",
+ o:["Outputs are automatic — any $GITHUB_OUTPUT write inside any step is exposed","Via a top-level outputs: block in action.yml that references steps.<id>.outputs.<name>, the same pattern used for job outputs","Only environment variables can be exposed, never outputs","Composite actions cannot produce outputs"],
+ c:1, e:"Composite action outputs must be explicitly wired at the top level, mapping an output name to steps.<id>.outputs.<name> — mirroring how job-level outputs work in a normal workflow."},
+{d:"actions", q:"In a JavaScript action, what actually determines whether GitHub Actions marks the step as failed?",
+ o:["Whether the console.log output contains the word 'error'","The process's exit code / an explicit call to core.setFailed() — logging an error message alone does not mark the step failed","Whether any HTTP request inside the action returned a non-200 status","The presence of a catch block, regardless of what's inside it"],
+ c:1, e:"A caught error that's only logged (console.log) still lets the process exit 0, so GitHub marks the step green regardless of what happened internally. core.setFailed() (or a non-zero exit) is what actually fails the step."},
+{d:"actions", q:"Which action type is restricted to Linux runners only?",
+ o:["Composite actions","JavaScript actions","Docker container actions","All action types share this restriction equally"],
+ c:2, e:"Docker container actions only run on Linux runners — a hard platform constraint. Attempting to use one on windows-latest or macos-latest fails outright, often with a confusing generic error rather than an explicit explanation."},
+{d:"actions", q:"In a Docker container action's action.yml, what can `image:` reference?",
+ o:["Only a pre-built image on Docker Hub","Either a local Dockerfile (built at job-run time) or a pre-built image reference like docker://ghcr.io/org/image:tag","Only a Dockerfile, never a pre-built image","A Kubernetes manifest"],
+ c:1, e:"image: can point to a Dockerfile (built fresh every run — slower but always current) or reference a pre-built image (faster startup, but you own keeping it updated)."},
+{d:"actions", q:"An action needs to call the GitHub GraphQL API, parse complex JSON, and behave identically on ubuntu-latest, windows-latest, and macos-latest matrix jobs. Which action type fits?",
+ o:["Composite action","JavaScript action","Docker container action","Any of the three work equally well"],
+ c:1, e:"Docker is ruled out by the Windows/macOS requirement (Linux-only). Composite has no computation of its own for JSON/GraphQL logic. JavaScript, using @actions/github's Octokit client, runs identically across all three OS families."},
+{d:"actions", q:"An action simply chains actions/checkout, actions/setup-python, then pip install — with no custom logic at all. Which action type is the right fit, and why?",
+ o:["JavaScript, because it's the most powerful option","Docker, for maximum environment control","Composite, because it's pure orchestration with no custom computation, avoiding the overhead of a build step or container image","None — this should be written as three separate workflow steps only"],
+ c:2, e:"When there's no custom logic — just bundling existing steps/actions — a composite action is the right (and simplest) fit, avoiding unnecessary build or container overhead."},
+{d:"actions", q:"An action needs to run terraform plan using one exact pinned Terraform CLI version and behave identically regardless of what's pre-installed on the consumer's runner. Which type fits best?",
+ o:["Composite action","JavaScript action","Docker container action","workflow_dispatch"],
+ c:2, e:"Guaranteeing an exact CLI version and identical behavior regardless of the host runner's pre-installed tools is exactly what a Docker image provides — the image itself is the environment."},
+{d:"actions", q:"Rank these `uses:` pinning strategies from least to most secure: @main, @v1, @<full commit SHA>.",
+ o:["@v1 is the most secure, since it's the community convention","@main is most secure, since it always has the latest fixes","@main (least secure, fully mutable) < @v1 (moderate, convention-based) < full SHA (most secure, immutable)","All three provide equivalent security guarantees"],
+ c:2, e:"@main is fully mutable and can change anytime. @v1 relies on a maintainer's social convention to move responsibly. A full commit SHA is the only cryptographically immutable option."},
+{d:"actions", q:"Why is pinning to a major-version tag like @v1 considered only a 'social contract,' not a technical guarantee?",
+ o:["Because @v1 tags are automatically deleted after a year","Because nothing technically prevents a maintainer (or an attacker who compromises their account) from repointing v1 to different code without notice — only a full SHA is cryptographically immutable","Because @v1 tags don't actually exist in Git","Because GitHub blocks all tag-based references by default"],
+ c:1, e:"Well-behaved maintainers move v1 forward responsibly by convention, but there's no technical enforcement — a compromised or careless maintainer could point v1 somewhere unexpected. A full SHA removes this risk entirely."},
+{d:"actions", q:"What does an action's action.yml `branding:` block control?",
+ o:["Which runners the action is allowed to use","How the action appears in the GitHub Marketplace (icon and color)","The action's version number","The action's required permissions"],
+ c:1, e:"branding: (an icon + color) is metadata specifically for how a published action displays in the Marketplace — alongside name and description."},
+{d:"actions", q:"A Docker action works fine in the author's own testing but fails for every consumer who includes windows-latest in their matrix, with a confusing 'no runner available'-style error. What's the real underlying cause?",
+ o:["The consumer's Windows runner is out of disk space","Docker container actions are Linux-only — the error doesn't clearly say this, but the action was silently excluded from non-Linux runners in the matrix","The action.yml is missing a description field","Windows runners don't support actions/checkout"],
+ c:1, e:"This is a favorite exam scenario precisely because the failure mode is a confusing generic error rather than an explicit 'Docker actions require Linux' message. The fix is restricting the matrix to Linux, or rewriting the action as composite/JavaScript for genuine cross-platform support."},
+
+// ---------------- MANAGE FOR THE ENTERPRISE (18) ----------------
+{d:"enterprise", q:"An organization sets a permissive Actions policy, but the enterprise account has a stricter one. Which one governs?",
+ o:["The organization's policy always wins, since it's more specific","The most restrictive applicable level always wins — here, the enterprise-level policy","Whichever policy was set most recently","Repository-level settings override both"],
+ c:1, e:"Repo, org, and enterprise levels can each set a policy, but the most restrictive level always wins — an enterprise-level lockdown overrides a more permissive org-level setting. 🔗 <a href='04_chapter_manage_enterprise.md#41-allowed-actions-policy-repo-org-enterprise-levels' target='_blank'>Related diagram: Chapter 4 §4.1 (policy hierarchy)</a>."},
+{d:"enterprise", q:"An org tightens its Actions policy to 'Allow <enterprise/org> actions and reusable workflows only.' Workflows across the org start failing to find actions/checkout. Why?",
+ o:["actions/checkout was deprecated","This strict local-only policy blocks anything outside the enterprise/org — including GitHub's own actions like actions/checkout, which live in the actions org, not inside the enterprise","actions/checkout requires a paid plan","The workflows have a YAML syntax error"],
+ c:1, e:"This is a classic exam trap: the strict 'local-only' tier blocks GitHub-authored actions too, since they technically live outside your enterprise/org. The fix is moving to the 'select actions' tier and allowlisting actions/* (or checking 'Allow actions created by GitHub')."},
+{d:"enterprise", q:"In an Actions allowlist, what does the syntax `*, !untrusted-org/*` mean?",
+ o:["Block everything","Allow everything except actions from untrusted-org","Allow only untrusted-org's actions","This syntax is invalid"],
+ c:1, e:"! excludes and is always evaluated as an override — this line allows everything broadly, then carves out an exception for a specific untrusted org."},
+{d:"enterprise", q:"Under a restrictive 'select actions' allowlist policy, are actions local to the same repository (referenced via ./) restricted?",
+ o:["Yes, they must be explicitly allowlisted like any other action","No — local (./) actions in the same repository are never restricted by these policies, regardless of the allowlist","Only if the repository is public","Only on self-hosted runners"],
+ c:1, e:"Local actions referenced with ./ are always exempt from allowed-actions policies — you can always call your own repo's local actions."},
+{d:"enterprise", q:"By default, are public repositories allowed to submit jobs to a newly created self-hosted runner group?",
+ o:["Yes, all repos in the org get access automatically","No — allows_public_repositories defaults to false; this must be explicitly opted into, given the fork-PR attack surface on public repos","Only if the runner group has fewer than 10 runners","Public repos can never use self-hosted runners under any configuration"],
+ c:1, e:"New runner groups default to more restrictive visibility, and public repos specifically default to excluded — a deliberate safety default given the well-known fork-PR attack vector against self-hosted compute."},
+{d:"enterprise", q:"Why does the combined `runs-on: { group:, labels: }` syntax exist, instead of just using labels alone?",
+ o:["It's purely cosmetic, with no functional difference from labels alone","It prevents an unintended runner elsewhere with matching labels but belonging to a different, wrong group from silently picking up the job","Labels alone are deprecated and no longer work","group: is required only for GitHub-hosted runners"],
+ c:1, e:"Without pinning both group and labels, a runner in an entirely different (wrong) group but with matching labels could pick up your job. The combined syntax closes this real footgun."},
+{d:"enterprise", q:"What distinguishes a runner scale set from a traditional self-hosted runner?",
+ o:["A scale set can carry multiple labels, just like traditional runners","A scale set belongs to exactly one runner group and has exactly one label, with its active count controlled by an autoscaler (ARC) rather than being fixed","Scale sets only run on Windows","A scale set cannot be targeted from a workflow's runs-on:"],
+ c:1, e:"Unlike traditional self-hosted runners (which can carry multiple labels), a runner scale set belongs to exactly one group and has exactly one label, and its size is autoscaled by ARC rather than fixed."},
+{d:"enterprise", q:"What manages autoscaling of ephemeral self-hosted runners on Kubernetes in the modern GitHub Actions approach?",
+ o:["Actions Runner Controller (ARC), using runner scale sets","GitHub-hosted runners with a custom label","A cron job that provisions VMs nightly","Repository rulesets"],
+ c:0, e:"ARC running on Kubernetes, using runner scale sets, is the modern approach to autoscaling self-hosted runners rather than maintaining a fixed pool of static machines."},
+{d:"enterprise", q:"Two runner scale sets are both online and eligible for the same job. How does GitHub decide which one picks it up?",
+ o:["The scale set with more available capacity always wins","This is not configurable — it's effectively a race between the eligible scale sets","The oldest scale set always wins","GitHub always alternates between them evenly"],
+ c:1, e:"When multiple eligible scale sets are online, which one acquires the job is not something you can configure — it's effectively a race."},
+{d:"enterprise", q:"One Kubernetes cluster hosting an ARC installation goes down. What happens to a runner scale set in a different, healthy cluster?",
+ o:["It also stops accepting jobs until the first cluster recovers","It continues acquiring and running jobs normally — this cross-cluster resilience is a specific, testable operational detail","All in-flight jobs org-wide are cancelled","ARC requires all clusters to be online simultaneously to function at all"],
+ c:1, e:"A scale set in a separate, healthy cluster keeps operating normally even if another ARC-hosting cluster goes down — this multi-cluster resilience is an explicitly noted operational property."},
+{d:"enterprise", q:"What is the actual function of an organization's 'starter workflows'?",
+ o:["They enforce that every repo in the org must use them","They are a discoverability/convenience mechanism that appears as a template option — they do not enforce anything; a maintainer can ignore or delete them freely","They automatically update every repo's existing workflow files","They replace the need for reusable workflows entirely"],
+ c:1, e:"Starter workflows make it easy to start with an org's blessed pattern, but enforce nothing — a repo maintainer can delete or never adopt the template. Actual enforcement requires rulesets; actual shared logic requires reusable workflows. 🔗 <a href='04_chapter_manage_enterprise.md#45-enforcing-required-checks--repository-rulesets-current-mechanism' target='_blank'>Related diagram: Chapter 4 §4.5 (starter vs reusable vs rulesets)</a>."},
+{d:"enterprise", q:"An organization wants every repo's CI to genuinely, centrally include a security-scan step, such that a future update to the scan logic propagates everywhere automatically. What's the right mechanism?",
+ o:["A starter workflow template","A reusable workflow (workflow_call) referenced by all consuming repos","A README instructing maintainers to add the step manually","An organization-wide Slack reminder"],
+ c:1, e:"Reusable workflows provide real, centrally-maintained, DRY logic — a change in the shared workflow propagates to every caller on their next run (unless they've pinned to an old SHA). Starter workflows are discoverability only, not this kind of standardization."},
+{d:"enterprise", q:"What is the current mechanism for enforcing that a specific status check must pass before a PR can merge, org-wide?",
+ o:["Required workflows (still fully supported and recommended)","Repository or organization-level rulesets requiring specific status checks — 'required workflows' has been retired","A pre-receive Git hook","Branch-level webhook subscriptions"],
+ c:1, e:"'Required workflows' has been retired by GitHub; the current, correct mechanism is repository (or org-level) rulesets that require specific status checks to pass."},
+{d:"enterprise", q:"A PR is permanently stuck showing 'Required check: deploy-check — Expected — Waiting for status to be reported,' even though the workflow's jobs (lint, test, build) all pass. What's wrong?",
+ o:["The workflow has a syntax error","The ruleset requires a status check literally named deploy-check, but no job in the workflow is named that — nothing will ever report under that name","The runner ran out of disk space","GitHub's status-check service is down"],
+ c:1, e:"A required status check name must match an actual reported job name exactly. If a job was renamed (or never named to match) and the ruleset wasn't updated, the check waits forever for a name that will never report."},
+{d:"enterprise", q:"What must stay in sync to avoid the 'orphaned required check' problem after refactoring a workflow?",
+ o:["The workflow's on: trigger and the repo's default branch","A job's name in the workflow YAML and the exact required-check name configured in the repository/org ruleset","The runner's OS version and the action's Node version","Nothing — GitHub automatically updates rulesets when jobs are renamed"],
+ c:1, e:"Renaming a job without updating the ruleset's required-check string is a very common, very realistic mistake — the ruleset's required-check name is coupled to the job name and must be updated together."},
+{d:"enterprise", q:"Where can an organization see Actions usage and billing broken down by repository and runner type, and who changed the allowed-actions policy?",
+ o:["Only via a support ticket to GitHub","Settings → Billing for usage, and the audit log for administrative events like policy changes","This information is not available at the organization level","Only enterprise (not organization) accounts can see this"],
+ c:1, e:"Org/enterprise-level billing settings show usage by repo and runner type, and the audit log captures Actions-related admin events (policy changes, runner registration, secret creation/deletion) for accountability."},
+{d:"enterprise", q:"An org has 3 public repos, 15 private repos, and one ML team needing GPU access on 2 of those private repos. What's the recommended runner group design?",
+ o:["One shared runner group for everything, to keep configuration simple","GitHub-hosted runners for the 3 public repos (avoiding self-hosted entirely); a general-private group for the other 13 private repos; a narrowly-scoped GPU group limited to just the 2 repos that need it","Put all 18 repos, public and private, on one self-hosted runner group with GPU labels","Disable self-hosted runners for the whole org to reduce complexity"],
+ c:1, e:"Public repos should stay on GitHub-hosted runners entirely to sidestep the fork-PR attack surface. Private repos without GPU needs get a general group; GPU access should be scoped narrowly to only the 2 repos that actually need it — least privilege applied to runner group design. 🔗 <a href='04_chapter_manage_enterprise.md#42-self-hosted-runner-groups' target='_blank'>Related diagram: Chapter 4 §4.2 (runner group structure for this exact scenario)</a>."},
+
+{d:"enterprise", q:"An org wants to allow its own internal actions plus a small, explicit list of vetted third-party actions, while blocking everything else. Which policy tier fits?",
+ o:["Allow all actions and reusable workflows","Allow <enterprise/org>, and select non-<enterprise/org>, actions and reusable workflows","Allow <enterprise/org> actions and reusable workflows only","Disable actions entirely"],
+ c:1, e:"The 'select actions' tier is the one that combines local/enterprise actions with an explicit allowlist of specific external actions — the strict enterprise-only tier has no allowlist mechanism at all."},
+
+// ---------------- SECURE & OPTIMIZE AUTOMATION (9) ----------------
+{d:"security", q:"What is 'scope zeroing' in the context of the permissions: block?",
+ o:["All permissions default to write access unless explicitly restricted","The moment you specify any individual permission, every permission you did NOT mention is set to none — not left at whatever the prior default was","It refers to zeroing out a repository's billing usage","It only applies to self-hosted runners"],
+ c:1, e:"Specifying even one permission triggers scope zeroing: everything unmentioned becomes none. This is what makes least-privilege practical — you declare what you need, and everything else is denied automatically. 🔗 Try it: <a href='08_interactive_companion.html#perms' target='_blank'>Interactive Companion → Permission Scoping tab</a>."},
+{d:"security", q:"A workflow sets `permissions: { contents: read }` at the top level. A specific job then sets its own `permissions: { issues: write }`. What access does that job's GITHUB_TOKEN actually have?",
+ o:["contents: read AND issues: write, merged together","Only issues: write — everything else, including contents, is none for this job, because job-level permissions completely replace (not merge with) workflow-level permissions","Only contents: read, since workflow-level settings take priority","Both permissions plus the repo's org-wide default"],
+ c:1, e:"A job-level permissions: block completely replaces the workflow-level one for that job — it does not merge. Since this job only specifies issues: write, contents (and everything else) becomes none for it specifically."},
+{d:"security", q:"A pull request comes from a fork. Under a plain `pull_request` trigger, what access does GITHUB_TOKEN have, regardless of what permissions: requests?",
+ o:["Full write access, since permissions: always overrides fork restrictions","Read-only, with no access to secrets — a hardcoded safety floor that workflow YAML cannot override under pull_request","The same access as a same-repo PR","It depends solely on the contributor's GitHub plan"],
+ c:1, e:"Fork PRs under pull_request always get a read-only token with zero secrets access, regardless of what permissions: says — this is a hardcoded floor (pull_request_target is the exception, with its own serious risks)."},
+{d:"security", q:"A workflow triggers on pull_request_target, checks out the fork's HEAD commit, then runs `npm install && npm test` using secrets available to the base repo. Why is this dangerous?",
+ o:["It isn't dangerous — pull_request_target is designed for exactly this pattern","pull_request_target grants base-repo privileges (including secrets) even for fork PRs, so executing the fork's own code (install scripts, test files) in that context lets an anonymous contributor run arbitrary code with those privileges","npm install always fails on forked code, so this is just a bug, not a security issue","This pattern is only risky if the repository is private"],
+ c:1, e:"This exact anti-pattern has caused real supply-chain compromises: pull_request_target's elevated, secret-bearing context combined with executing untrusted fork code (via any install/build/test script) is a direct path to credential theft. 🔗 <a href='05_chapter_secure_optimize.md#52-the-pull_request-vs-pull_request_target-trap' target='_blank'>Related diagram: Chapter 5 §5.2 (safe two-workflow split)</a> — or try the <a href='08_interactive_companion.html#prtarget' target='_blank'>Interactive Companion's PR Trigger Simulator tab</a> with these exact settings."},
+{d:"security", q:"What's the safe way to both build/test a fork's code AND post a privileged comment/result using base-repo secrets?",
+ o:["Use pull_request_target for the whole thing and just be careful","Split into two workflows: one on pull_request (safe, fork code, no secrets) that uploads results as an artifact, and a second on workflow_run (privileged, base-repo context) that downloads the artifact and posts the result — never executing the fork's code directly","Grant the fork PR contributor temporary write access to the repo","Disable secrets entirely for the repository"],
+ c:1, e:"The two-workflow split keeps fork code execution entirely within the safe, secret-free pull_request context, while the privileged workflow_run step only ever touches an already-built artifact — never the fork's raw code."},
+{d:"security", q:"A deploy workflow using aws-actions/configure-aws-credentials suddenly fails with 'Could not load credentials from any providers,' with no changes to the steps: block. What's the likely cause?",
+ o:["AWS servers are down","A permissions change (e.g., an org-wide GITHUB_TOKEN default tightening) removed the implicit id-token: write this workflow relied on for OIDC — the fix is adding permissions: { id-token: write } explicitly","The IAM role was deleted","The runner's clock is out of sync"],
+ c:1, e:"OIDC cloud-auth actions require id-token: write explicitly. Without it, they silently fail and fall back to looking for static credentials that were never configured — producing this confusing, generic error rather than an obvious permissions message. 🔗 <a href='05_chapter_secure_optimize.md#53-oidc--keyless-cloud-authentication' target='_blank'>Related diagram: Chapter 5 §5.3 (OIDC keyless auth sequence)</a>."},
+{d:"security", q:"A team wants to require a human to manually approve a workflow job before it can deploy to production. What's the correct mechanism?",
+ o:["An if: condition checking a manual input","Environment protection rules (required reviewers) on the production environment — if: conditions cannot pause and wait for human approval","A workflow_dispatch input asking 'Are you sure?'","There is no way to require human approval in GitHub Actions"],
+ c:1, e:"Only Environment protection rules (required reviewers, wait timers) can actually pause a job pending human approval. An if: expression evaluates once and cannot wait for external input."},
+{d:"security", q:"Which uses: pinning strategy provides a cryptographic, immutable guarantee that the referenced code cannot silently change?",
+ o:["@main","@v1","@v1.2.3","A full commit SHA, e.g. @8f4b7f84864484a7bf31766abe9204da3cbe65b3"],
+ c:3, e:"Tags (@v1, @v1.2.3) rely on a maintainer's convention and can technically be repointed. Only a full commit SHA is cryptographically immutable — the current recommendation for security-sensitive third-party action references."},
+{d:"security", q:"An org's CI bill has grown significantly with no clear single cause. What's the typical, most impactful order of things to check first?",
+ o:["Runner OS choice, then workflow naming conventions, then repo description length","Matrix bloat (unnecessary combinations), then missing caching, then missing concurrency cancellation of superseded runs, then docs-only changes triggering full CI unnecessarily","Whether contributors use dark mode in the GitHub UI","The number of collaborators on the repository"],
+ c:1, e:"Cost/performance questions on the exam are usually scenario-based, and the expected diagnostic order is roughly: matrix bloat → missing caching → no concurrency cancellation → docs-only triggers running expensive CI, in that order of common-and-fixable."},
+];
+
+/* ============================================================
+   STATE
+   ============================================================ */
+let order = [];
+let current = 0;
+let score = 0;
+let domainStats = {};
+let answered = false;
+let missedIndices = [];   // QUESTIONS-array indices answered incorrectly this run
+
+function shuffle(arr){
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
+
+function startQuiz(poolIndices){
+  // poolIndices lets "Review missed questions" re-run just a subset;
+  // omitted (normal start) uses every question in the bank.
+  const pool = (poolIndices && poolIndices.length) ? poolIndices.slice() : QUESTIONS.map((q,i)=>i);
+  order = shuffle(pool);
+  current = 0;
+  score = 0;
+  answered = false;
+  missedIndices = [];
+  domainStats = {};
+  Object.keys(DOMAINS).forEach(k=>{ domainStats[k] = {correct:0,total:0}; });
+  order.forEach(qi=>{ domainStats[QUESTIONS[qi].d].total++; });
+
+  document.getElementById('intro').classList.add('hidden');
+  document.getElementById('results').classList.add('hidden');
+  document.getElementById('quiz').classList.remove('hidden');
+  buildTracker();
+  renderQuestion();
+}
+
+function buildTracker(){
+  const tracker = document.getElementById('tracker');
+  tracker.innerHTML = '';
+  Object.entries(DOMAINS).forEach(([key,d])=>{
+    const node = document.createElement('div');
+    node.className = 'node';
+    node.id = 'node-'+key;
+    node.innerHTML = `<div class="connector"></div><div class="dot">${d.short}</div><div class="label">${d.label}</div>`;
+    tracker.appendChild(node);
+  });
+}
+
+function updateTracker(){
+  const currentDomain = QUESTIONS[order[current]].d;
+  const domainKeys = Object.keys(DOMAINS);
+  const currentIdx = domainKeys.indexOf(currentDomain);
+  domainKeys.forEach((key,idx)=>{
+    const node = document.getElementById('node-'+key);
+    node.classList.remove('done','current');
+    if(idx < currentIdx) node.classList.add('done');
+    else if(idx === currentIdx) node.classList.add('current');
+  });
+}
+
+function renderQuestion(){
+  answered = false;
+  const qi = order[current];
+  const q = QUESTIONS[qi];
+  const d = DOMAINS[q.d];
+
+  document.getElementById('qcounter').textContent = `Question ${current+1} / ${order.length}`;
+  document.getElementById('progressFill').style.width = ((current)/order.length*100) + '%';
+  document.getElementById('domainChip').textContent = d.label.toUpperCase() + (d.weighted ? '' : ' · WARM-UP');
+  document.getElementById('qtext').textContent = q.q;
+
+  updateTracker();
+
+  const snippet = document.getElementById('snippet');
+  if(q.snippet){
+    snippet.textContent = q.snippet;
+    snippet.classList.remove('hidden');
+  } else {
+    snippet.classList.add('hidden');
+  }
+
+  const optsWrap = document.getElementById('options');
+  optsWrap.innerHTML = '';
+  const letters = ['A','B','C','D'];
+  q.o.forEach((optText, idx)=>{
+    const li = document.createElement('li');
+    li.className = 'opt';
+    li.innerHTML = `<span class="letter">${letters[idx]}</span><span>${optText}</span>`;
+    li.onclick = ()=> selectOption(idx);
+    optsWrap.appendChild(li);
+  });
+
+  document.getElementById('feedback').className = 'feedback';
+  document.getElementById('nextBtn').classList.remove('show');
+}
+
+function selectOption(idx){
+  if(answered) return;
+  answered = true;
+  const qi = order[current];
+  const q = QUESTIONS[qi];
+  const opts = document.querySelectorAll('#options .opt');
+
+  const isCorrect = idx === q.c;
+  if(isCorrect){
+    score++;
+    domainStats[q.d].correct++;
+  } else {
+    missedIndices.push(qi);
+  }
+  domainStats[q.d].total = domainStats[q.d].total; // already counted
+
+  opts.forEach((el,i)=>{
+    el.classList.add('disabled');
+    if(i === q.c) el.classList.add('correct');
+    else if(i === idx) el.classList.add('incorrect');
+    else el.classList.add('dimmed');
+  });
+
+  const fb = document.getElementById('feedback');
+  fb.classList.add('show');
+  fb.classList.remove('correct-fb','incorrect-fb');
+  fb.classList.add(isCorrect ? 'correct-fb' : 'incorrect-fb');
+  document.getElementById('fbTitle').textContent = isCorrect ? 'Correct' : 'Not quite';
+  document.getElementById('fbBody').innerHTML = q.e;
+
+  document.getElementById('nextBtn').classList.add('show');
+  document.getElementById('nextBtn').textContent = (current === order.length-1) ? 'See results →' : 'Next →';
+}
+
+function nextQuestion(){
+  if(!answered) return;
+  current++;
+  if(current >= order.length){
+    showResults();
+  } else {
+    renderQuestion();
+  }
+}
+
+function showResults(){
+  document.getElementById('progressFill').style.width = '100%';
+  document.getElementById('quiz').classList.add('hidden');
+  document.getElementById('results').classList.remove('hidden');
+
+  const pct = Math.round((score/order.length)*100);
+  document.getElementById('scoreCircle').style.setProperty('--pct', pct);
+  document.getElementById('scoreNum').textContent = pct + '%';
+  document.getElementById('resultsTitle').textContent =
+    pct >= 85 ? 'Strong run' : pct >= 70 ? 'Solid, with gaps' : 'Worth another pass';
+  document.getElementById('resultsSub').textContent =
+    `${score} of ${order.length} correct. Domain breakdown below — weighted domains matter most for exam readiness.`;
+
+  const breakdown = document.getElementById('breakdown');
+  breakdown.innerHTML = '';
+  Object.entries(DOMAINS).forEach(([key,d])=>{
+    const stat = domainStats[key];
+    const dpct = stat.total ? Math.round((stat.correct/stat.total)*100) : 0;
+    const barClass = dpct >= 75 ? '' : dpct >= 50 ? 'weak' : 'poor';
+    const row = document.createElement('div');
+    row.className = 'db-row';
+    row.innerHTML = `
+      <div class="db-name">${d.label}${d.weighted ? '' : ' <span style="color:var(--ink-soft);font-weight:400;">(warm-up)</span>'}</div>
+      <div class="db-bar-track"><div class="db-bar-fill ${barClass}" style="width:${dpct}%"></div></div>
+      <div class="db-score">${stat.correct}/${stat.total}</div>
+    `;
+    breakdown.appendChild(row);
+  });
+
+  const reviewBtn = document.getElementById('reviewMissedBtn');
+  if (missedIndices.length > 0) {
+    reviewBtn.textContent = `Review missed questions (${missedIndices.length})`;
+    reviewBtn.classList.remove('hidden');
+  } else {
+    reviewBtn.classList.add('hidden');
+  }
+}
+
+function reviewMissed(){
+  if (missedIndices.length === 0) return;
+  startQuiz(missedIndices);
+}
+
+function restartQuiz(){
+  document.getElementById('results').classList.add('hidden');
+  document.getElementById('intro').classList.remove('hidden');
+}
+</script>
+</body>
+</html>
