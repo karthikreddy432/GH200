@@ -32,6 +32,7 @@ Tied for the largest domain. This is governance territory: who can use which act
 - [4.5 Enforcing Required Checks — Repository Rulesets (Current Mechanism)](#45-enforcing-required-checks--repository-rulesets-current-mechanism)
 - [4.6 Environments — Protection Rules, Required Reviewers, and Deployment Branch Policies](#46-environments--protection-rules-required-reviewers-and-deployment-branch-policies)
 - [4.7 Organization-Level Visibility and Usage](#47-organization-level-visibility-and-usage)
+- [4.8 Secret and Variable Precedence Across Levels](#48-secret-and-variable-precedence-across-levels)
 
 ---
 
@@ -334,6 +335,35 @@ jobs:
 
 ---
 
+## 4.8 Secret and Variable Precedence Across Levels
+
+Both **secrets** (encrypted) and **variables** (`vars`, plain text — introduced in §1.3) can be defined at three levels: **organization**, **repository**, and **environment**. A workflow can, without realizing it, be reading a value from a different level than the one someone just edited — this is one of the most common real-world "why isn't my change taking effect" support tickets, and a favorite exam trap for exactly that reason.
+
+**The precedence rule, most specific wins:**
+
+```
+Environment secret/variable  >  Repository secret/variable  >  Organization secret/variable
+```
+
+- If the **same name** exists at more than one level, the **most specific level visible to that job wins** — an environment-scoped `API_KEY` silences a repository-scoped `API_KEY` of the same name for any job that declares that `environment:`, which in turn silences an organization-scoped `API_KEY` of the same name.
+- This is **name-based shadowing, not merging** — the job doesn't see "the org value, then overridden by the repo value"; it only ever sees the single most-specific value. There's no way to reference the shadowed lower-level value from within the workflow.
+- **Organization-level** secrets/variables can be scoped to **all repos** or a **selected subset** — a repo not in the selected subset simply doesn't see that org-level entry at all (not an empty value — it's as if it doesn't exist for that repo).
+- **Repository-level** secrets/variables are visible to every workflow in that repo, regardless of environment.
+- **Environment-level** secrets/variables are only visible to jobs that explicitly declare `environment: <name>` — and, per §4.6, resolving them is bundled with enforcing that environment's protection rules.
+
+```yaml
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production   # this job sees the "production" environment's secrets/vars first,
+    steps:                    # falling back to repo-level, then org-level, for any name not set there
+      - run: echo "${{ vars.API_ENDPOINT }}"
+```
+
+🔴 **Exam tip:** "A workflow used to deploy to the right region, then someone added a `production` environment and now it deploys to the wrong one" → look for a **same-named variable/secret defined at the environment level** that's now shadowing the repository-level value the workflow used to read, not a bug in the workflow's own logic.
+
+---
+
 ## ⚠️ Common Mistakes in This Chapter
 
 ❌ Assuming "required workflows" is still the mechanism for enforcing org-wide CI.
@@ -354,6 +384,9 @@ jobs:
 ❌ Trying to gate a production deploy on human approval using `if:`.
 ✅ Use an Environment's required reviewers — `if:` cannot pause a job to wait for a person.
 
+❌ Assuming an org-level secret/variable change takes effect everywhere immediately.
+✅ Check for a same-named repo- or environment-level entry shadowing it first — most specific always wins, silently.
+
 ---
 
 ## ✅ Chapter 4 Summary (TL;DR)
@@ -365,5 +398,6 @@ jobs:
 - Starter workflows = discoverability only. Reusable workflows = actual shared logic. Rulesets = actual enforcement.
 - "Required workflows" is a **retired** feature — the current way to require a CI check org-wide is a **repository ruleset**.
 - Environments (§4.6) provide three protection controls — required reviewers, wait timer, deployment branch policies — and are the only mechanism that can genuinely pause a job for human approval; `if:` cannot do this.
+- Secrets and variables can exist at org, repo, and environment level simultaneously; same name at multiple levels → most specific wins (environment > repository > organization), by shadowing, not merging (§4.8).
 
 **Next:** Chapter 5 — Secure and Optimize Automation: secrets management, OIDC, `GITHUB_TOKEN` scoping, supply-chain pinning, and cost/performance optimization.

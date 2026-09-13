@@ -86,8 +86,11 @@ flowchart TD
 | Workflow doesn't trigger at all | Event/branch/path filter didn't match, or workflow file has YAML syntax error | `on:` block; also check the repo's "Actions" tab for a parse-error banner |
 | `Error: Process completed with exit code 1` (no other detail) | Generic shell failure — the real cause is upstream in the log | Scroll up within the same step; enable debug logs if needed |
 | Intermittent/flaky failures on service-dependent tests | Missing health check on a `services:` container | The `services:` block's `options:` |
+| Every other matrix job suddenly shows `Cancelled` mid-run | One matrix combination failed and `fail-fast` (defaults `true`) killed the rest | Whichever matrix job actually shows red, not the cancelled ones — that's the real failure |
 
 🔴 **Exam tip:** "Skipped" is not a failure. A grey/skipped job icon almost always means an upstream dependency failed or an `if:` evaluated false — GH-200 scenario questions frequently show you a run summary and ask you to identify *why* a specific job didn't run, testing whether you can distinguish "failed" from "skipped" from "cancelled."
+
+**Matrix-specific troubleshooting note** (mechanics covered in Chapter 1 §1.5): a `Cancelled` matrix job is not itself the problem — `fail-fast: true` (the default) cancels every *other* in-progress or queued matrix combination the instant *any one* combination fails, so a run showing nine cancelled jobs and one red job means there's exactly one real failure to investigate, not ten. Chasing the cancelled jobs' logs wastes time; go straight to the single red one. If you need to see every combination's actual result during debugging (rather than have most of them cancelled), set `fail-fast: false` temporarily.
 
 ---
 
