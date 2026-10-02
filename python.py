@@ -278,7 +278,6 @@ ROOT_CAUSE_RULES = (
             {"regex": r"INSTALLATION FAILED", "description": "Helm install failed."},
             {"regex": r"rendered manifests contain a resource that already exists", "description": "Helm failed because a rendered resource already exists and is not managed by the release."},
             {"regex": r"another operation \(install/upgrade/rollback\) is in progress", "description": "Helm failed because another release operation is already in progress."},
-            {"regex": r"helm.*(error|failed)", "description": "A Helm command failed during the deployment."},
         ),
         "action": "Inspect the Helm error, release status (helm status/history) and rendered manifests before retrying.",
     },
@@ -1059,7 +1058,8 @@ def _rca_strength(analysis: dict | None) -> int:
     """0 = nothing found, 1 = generic/symptom only (inconclusive), 2 = a real root cause."""
     if analysis is None or analysis["failure_category"] == "Insufficient deployment evidence":
         return 0
-    if analysis["failure_category"] in GENERIC_CATEGORIES or analysis["failure_category"].endswith("(symptom only)"):
+    if (analysis["failure_category"] in GENERIC_CATEGORIES
+            or analysis["failure_category"].endswith(("(symptom only)", NO_SIGNAL_SUFFIX))):
         return 1
     return 2
 
@@ -1344,10 +1344,46 @@ def _parse_failure_summaries(log_text: str) -> list[dict]:
                 "root_cause": fields["root_cause"].strip(),
                 "error_line": error_line,
                 "action": fields.get("suggested_action", "").strip(),
+                "context": fields.get("context", "").strip(),
                 # RBAC "forbidden" lines are diagnostic limitations, never part of the reported evidence.
                 "lines": [l for l in kept if not any(re.search(p, l, re.IGNORECASE) for p in IGNORED_PATTERNS)],
             })
     return blocks
+
+
+# "Root Cause: Unknown failure" + "Exact Signal: No explicit failure signal captured." (Context: readiness-timeout)
+NO_SIGNAL_LINE = re.compile(r"^no (explicit|exact|clear)\b", re.IGNORECASE)
+NO_SIGNAL_SUFFIX = "(no explicit failure signal)"
+
+
+def _no_signal_summary_analysis(jobs: list[dict], log_by_job: dict[str, str]) -> dict | None:
+    """RCA for a failure summary that is inconclusive AND captured no failure signal (the last such block
+    wins). Only used when nothing more specific was found, so a real error elsewhere in the logs still wins."""
+    chosen = None
+    for job in jobs:
+        for block in _parse_failure_summaries(log_by_job.get(str(job.get("id")), "")):
+            no_signal = not block["error_line"] or NO_SIGNAL_LINE.match(block["error_line"])
+            if INCONCLUSIVE_ROOT_CAUSE.search(block["root_cause"]) and no_signal:
+                chosen = (job, block)
+    if chosen is None:
+        return None
+    job, block = chosen
+    if "readiness" in block["context"].lower():
+        category = f"Readiness timeout {NO_SIGNAL_SUFFIX}"
+        root_cause = (f"The deployment did not become ready within the readiness timeout; the workflow's failure "
+                      f"summary reported '{block['root_cause']}' with no explicit failure signal.")
+    else:
+        category = f"Unexplained failure {NO_SIGNAL_SUFFIX}"
+        context = f" ({block['context']})" if block["context"] else ""
+        root_cause = f"The workflow's failure summary{context} reported '{block['root_cause']}' with no explicit failure signal."
+    return {
+        "failure_category": category,
+        "root_cause": root_cause,
+        "evidence": "\n".join(block["lines"])[:MAX_LOG_EVIDENCE_LENGTH],
+        "error_line": block["error_line"] or block["root_cause"],
+        "recommended_action": "Review the pod describe/log output and namespace events printed by the readiness-check step in the workflow run.",
+        "source_job": job.get("name", "unknown job"),
+    }
 
 
 def _match_k8s_rule(text: str) -> dict | None:
@@ -1404,6 +1440,7 @@ def analyze_jobs(jobs: list[dict], log_by_job: dict[str, str]) -> dict:
       2. the workflow's "INTELLIGENT FAILURE SUMMARY" block (categorised with the Kubernetes rules)
       3. Kubernetes errors (CreateContainerConfigError, ImagePullBackOff, OOMKilled, CrashLoopBackOff ...)
       4. the regular ROOT_CAUSE_RULES
+      5. when 4 is empty or only generic: a failure summary that reported no explicit failure signal
     """
     if jobs:
         missing = _collect_rule_signals((MISSING_VARIABLES_RULE,), jobs, log_by_job)
@@ -1424,7 +1461,12 @@ def analyze_jobs(jobs: list[dict], log_by_job: dict[str, str]) -> dict:
                 if _rca_strength(standard) == 2:
                     result["root_cause"] += f" Underlying error seen in the logs: {standard['root_cause']}"
             return result
-    return _analyze_standard(jobs, log_by_job)
+    standard = _analyze_standard(jobs, log_by_job)
+    if _rca_strength(standard) < 2:
+        no_signal = _no_signal_summary_analysis(jobs, log_by_job)
+        if no_signal:
+            return no_signal
+    return standard
 
 
 def _analyze_standard(jobs: list[dict], log_by_job: dict[str, str]) -> dict:
@@ -1565,14 +1607,14 @@ def write_summary_markdown(path, args, environment, stats, records, error_rows, 
             h.write("\n")
 
         h.write("## Summary Report\n\n")
-        h.write("| CHG Number | Repository | Workflow Run | Deployment Time | Root Cause | Error Summary |\n")
-        h.write("|---|---|---|---|---|---|\n")
+        h.write("| CHG Number | Repository | Workflow Run | Deployment Time | Root Cause | Error Summary | Action |\n")
+        h.write("|---|---|---|---|---|---|---|\n")
         for r in records:
             link = f"[Open Run]({r['WorkflowRunUrl']})" if r["WorkflowRunUrl"].startswith("http") else "N/A"
             h.write(f"| {r['ChangeNumber']} | {_md(r['Repository'])} | {link} | "
-                    f"{r['DeploymentTime']} | {_md(r['RootCause'])} | {_md(r['ErrorSummary'])} |\n")
+                    f"{r['DeploymentTime']} | {_md(r['RootCause'])} | {_md(r['ErrorSummary'])} | {_md(r['RecommendedAction'])} |\n")
         if not records:
-            h.write("| N/A | - | - | - | - | - |\n")
+            h.write("| N/A | - | - | - | - | - | - |\n")
         h.write("\n")
 
         h.write("## Collection Errors\n\n")
