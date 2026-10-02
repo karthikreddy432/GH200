@@ -557,28 +557,10 @@ class ServiceNowClient(RetryingClient):
 
 
 class CollectionErrors:
-    """Thread-safe log of individual API/processing failures; the report is generated regardless."""
-
-    def __init__(self):
-        self._rows: list[dict] = []
-        self._lock = threading.Lock()
+    """Logs individual API/processing failures to stderr; the report is generated regardless."""
 
     def add(self, ctx: dict, endpoint: str, message: str) -> None:
-        row = {
-            "ChangeNumber": ctx.get("chg") or "N/A",
-            "Repository": ctx.get("repository") or "N/A",
-            "DeploymentId": str(ctx.get("deployment_id") or "N/A"),
-            "WorkflowUrl": ctx.get("workflow_url") or "N/A",
-            "ApiEndpoint": endpoint or "N/A",
-            "ErrorMessage": message,
-        }
-        with self._lock:
-            self._rows.append(row)
-        print(f"[collection-error] {row['ChangeNumber']} {row['Repository']} {row['ApiEndpoint']}: {message}", file=sys.stderr)
-
-    def rows(self) -> list[dict]:
-        with self._lock:
-            return list(self._rows)
+        print(f"[collection-error] {ctx.get('chg') or 'N/A'} {ctx.get('repository') or 'N/A'} {endpoint or 'N/A'}: {message}", file=sys.stderr)
 
 
 def guarded_get(client: GitHubClient, errors: CollectionErrors, ctx: dict, url: str, params: dict | None = None):
@@ -1220,7 +1202,7 @@ def process_repository(client, errors, repo, environment, range_start, range_end
             records.append(collection_failure_record(repo, environment, f"{type(exc).__name__}: {exc}", event))
     if not lookup_ok and not events:
         records.append(collection_failure_record(
-            repo, environment, "GitHub deployment data could not be retrieved for this repository; see Collection Errors."))
+            repo, environment, "GitHub deployment data could not be retrieved for this repository; see the [collection-error] lines in the run log."))
     return records
 
 
@@ -1396,6 +1378,59 @@ def _match_k8s_rule(text: str) -> dict | None:
     return best
 
 
+# ---------------------------------------------------------------------------
+# "Helm Template Dry Run" step. It renders the chart BEFORE the Helm deploy, so when it fails nothing was
+# deployed and any later pod/container error (OOMKilled, CrashLoopBackOff ...) is not the cause. It is
+# recognised from its runtime output: the "Running Helm template dry run ..." line followed, within a few
+# lines, by an "Error: ..." line. (The echoed step definition is already stripped from the log.)
+#   Running Helm template dry run for chart: helm-charts/charts/ocp/springboot
+#   Error: open helm/application-values.yaml: no such file or directory
+# ---------------------------------------------------------------------------
+HELM_DRY_RUN_MARKER = re.compile(r"helm template dry run", re.IGNORECASE)
+HELM_DRY_RUN_ERROR = re.compile(r"^error:\s*(.+)$", re.IGNORECASE)
+HELM_MISSING_FILE = re.compile(r"^open\s+(\S+):\s*no such file or directory", re.IGNORECASE)
+HELM_DRY_RUN_WINDOW = 10  # lines after the marker that can still belong to the dry-run step
+
+
+def _helm_dry_run_analysis(jobs: list[dict], log_by_job: dict[str, str]) -> dict | None:
+    """RCA for a failed Helm template dry run, or None when the logs show no such failure."""
+    for job in jobs:
+        lines = log_by_job.get(str(job.get("id")), "").splitlines()
+        for index, line in enumerate(lines):
+            if not HELM_DRY_RUN_MARKER.search(_clean_log_line(line)):
+                continue
+            shown = [_clean_log_line(line)]
+            for raw in lines[index + 1: index + 1 + HELM_DRY_RUN_WINDOW]:
+                text = _clean_log_line(raw)
+                if text.startswith("##["):
+                    break
+                shown.append(text)
+                error = HELM_DRY_RUN_ERROR.match(text)
+                if not error or "process completed with exit code" in text.lower():
+                    continue
+                detail = error.group(1).strip()
+                missing = HELM_MISSING_FILE.match(detail)
+                if missing:
+                    path = missing.group(1)
+                    root_cause = (f"Helm template dry run failed before the deployment: the values file '{path}' "
+                                  "was not found in the checked-out repository.")
+                    action = (f"Check that {path} is present in the branch and try build and deploy "
+                              "instead of only deploy.")
+                else:
+                    root_cause = f"Helm template dry run failed before the deployment: {detail}"
+                    action = ("Review the Helm template/values error above, fix the chart values or templates "
+                              "for this branch, then re-run build and deploy.")
+                return {
+                    "failure_category": "Helm template dry run failure",
+                    "root_cause": root_cause,
+                    "evidence": "\n".join(t for t in shown if t)[:MAX_LOG_EVIDENCE_LENGTH],
+                    "error_line": text,
+                    "recommended_action": action,
+                    "source_job": job.get("name", "unknown job"),
+                }
+    return None
+
+
 def _signal_result(signal: dict) -> dict:
     return {
         "failure_category": signal["category"],
@@ -1437,6 +1472,7 @@ def _failure_summary_analysis(jobs: list[dict], log_by_job: dict[str, str]) -> d
 def analyze_jobs(jobs: list[dict], log_by_job: dict[str, str]) -> dict:
     """RCA order for the given jobs:
       1. missing CI/CD variables/secrets (placeholder replacement failed)
+      1b. a failed Helm template dry run (it runs before the Helm deploy, so it outranks everything below)
       2. the workflow's "INTELLIGENT FAILURE SUMMARY" block (categorised with the Kubernetes rules)
       3. Kubernetes errors (CreateContainerConfigError, ImagePullBackOff, OOMKilled, CrashLoopBackOff ...)
       4. the regular ROOT_CAUSE_RULES
@@ -1446,6 +1482,10 @@ def analyze_jobs(jobs: list[dict], log_by_job: dict[str, str]) -> dict:
         missing = _collect_rule_signals((MISSING_VARIABLES_RULE,), jobs, log_by_job)
         if missing:
             return _signal_result(missing[0])
+
+        dry_run = _helm_dry_run_analysis(jobs, log_by_job)
+        if dry_run:
+            return dry_run
 
         summary = _failure_summary_analysis(jobs, log_by_job)
         if summary:
@@ -1561,12 +1601,6 @@ def _md(value, limit: int | None = None) -> str:
     return text[:limit] + "..." if limit and len(text) > limit else text
 
 
-def _error_count(record: dict, error_rows: list[dict]) -> int:
-    if record["DeploymentId"] == "N/A":
-        return 0
-    return sum(1 for e in error_rows if e["Repository"] == record["Repository"] and e["DeploymentId"] == record["DeploymentId"])
-
-
 def _flat(value) -> str:
     return "; ".join(str(v) for v in value) if isinstance(value, (list, tuple)) else str(value)
 
@@ -1575,12 +1609,11 @@ CSV_COLUMNS = [
     "ChangeNumber", "Repository", "Environment", "DeploymentId", "WorkflowRunUrl", "DeploymentTime",
     "DeploymentStatus", "FailureCategory", "RootCause", "ErrorSummary", "FailedAttempt", "FailedJobs",
     "FailedSteps", "PodLogJob", "WorkflowChangeNumbers", "ChgSource", "Owner", "Technology",
-    "SourceJob", "Evidence", "RecommendedAction", "DataQualityNotes", "CollectionErrorCount",
+    "SourceJob", "Evidence", "RecommendedAction", "DataQualityNotes",
 ]
-ERROR_COLUMNS = ["ChangeNumber", "Repository", "DeploymentId", "WorkflowUrl", "ApiEndpoint", "ErrorMessage"]
 
 
-def write_summary_markdown(path, args, environment, stats, records, error_rows, top_repos, top_owners, top_techs) -> None:
+def write_summary_markdown(path, args, environment, stats, records, top_repos, top_owners, top_techs) -> None:
     with open(path, "w", encoding="utf-8") as h:
         h.write("# 📊 Deployment Failure Analytics Report\n\n")
         h.write("## Filters Applied\n\n")
@@ -1616,14 +1649,6 @@ def write_summary_markdown(path, args, environment, stats, records, error_rows, 
         if not records:
             h.write("| N/A | - | - | - | - | - | - |\n")
         h.write("\n")
-
-        h.write("## Collection Errors\n\n")
-        if error_rows:
-            h.write("| CHG Number | Repository | Deployment ID | Workflow URL | API Endpoint | Error Message |\n|---|---|---|---|---|---|\n")
-            for e in error_rows:
-                h.write("| " + " | ".join(_md(e[c], 300) for c in ERROR_COLUMNS) + " |\n")
-        else:
-            h.write("_No collection errors._\n")
 
 
 def main() -> int:
@@ -1700,9 +1725,6 @@ def main() -> int:
     print("[info] Enriching repository topics...", flush=True)
     enrich_records_with_topics(records, github_client, errors)
 
-    error_rows = errors.rows()
-    for r in records:
-        r["CollectionErrorCount"] = _error_count(r, error_rows)
     records.sort(key=lambda r: (r["DeploymentDate"], r["DeploymentId"]), reverse=True)
 
     failed = [r for r in records if r["DeploymentStatus"] == "Failure"]
@@ -1712,7 +1734,6 @@ def main() -> int:
         "failed_deployments": len(failed),
         "chg_found": sum(1 for r in failed if r["ChangeNumber"] != "N/A"),
         "chg_not_found": sum(1 for r in failed if r["ChangeNumber"] == "N/A"),
-        "collection_errors": len(error_rows),
     }
     top_repos = rank_by_field(records, "Repository")
     top_owners = rank_by_field(records, "Owner")
@@ -1725,12 +1746,6 @@ def main() -> int:
         writer.writeheader()
         for r in records:
             writer.writerow({c: _flat(r[c]) for c in CSV_COLUMNS})
-    errors_path = os.path.join(args.output_dir, "collection-errors.csv")
-    with open(errors_path, "w", encoding="utf-8", newline="") as h:
-        writer = csv.DictWriter(h, fieldnames=ERROR_COLUMNS)
-        writer.writeheader()
-        writer.writerows(error_rows)
-
     json_path = os.path.join(args.output_dir, "deployment-report.json")
     with open(json_path, "w", encoding="utf-8") as h:
         json.dump(
@@ -1746,16 +1761,15 @@ def main() -> int:
                 "top_failure_owners": [{"owner": v, "failed_deployments": c, "percentage": round(p, 1)} for v, c, p in top_owners],
                 "top_failure_technologies": [{"technology": v, "failed_deployments": c, "percentage": round(p, 1)} for v, c, p in top_techs],
                 "deployments": records,
-                "collection_errors": error_rows,
             },
             h, indent=2,
         )
 
     summary_path = os.path.join(args.output_dir, "summary.md")
-    write_summary_markdown(summary_path, args, environment, stats, records, error_rows, top_repos, top_owners, top_techs)
+    write_summary_markdown(summary_path, args, environment, stats, records, top_repos, top_owners, top_techs)
 
-    print(f"[info] Wrote {csv_path}, {errors_path}, {json_path}, {summary_path}", flush=True)
-    print(f"[info] Done in {elapsed:.1f}s ({snow_client.calls} ServiceNow / {github_client.calls} GitHub API calls, {len(error_rows)} collection error(s))")
+    print(f"[info] Wrote {csv_path}, {json_path}, {summary_path}", flush=True)
+    print(f"[info] Done in {elapsed:.1f}s ({snow_client.calls} ServiceNow / {github_client.calls} GitHub API calls)")
     return 0
 
 
