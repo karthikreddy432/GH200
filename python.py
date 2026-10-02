@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-"""PRD deployment failure report: ServiceNow unsuccessful CHGs (repository names only) -> GitHub failed PRD deployments -> failed job logs (CHG + RCA)."""
 
 from __future__ import annotations
 
@@ -689,9 +688,59 @@ def group_jobs_by_run_attempt(jobs: list[dict]) -> dict[str, list[dict]]:
     return groups
 
 
+# Leading timestamp of a raw job-log line (optionally preceded by a BOM) and ANSI colour codes.
+LOG_TIMESTAMP_PREFIX = re.compile(r"^\ufeff?\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z\s*")
+ANSI_ESCAPE_PATTERN = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
+
+
+def _log_marker(line: str) -> str:
+    """Line without ANSI codes and timestamp, lower-cased (used to recognise ##[group] markers)."""
+    return LOG_TIMESTAMP_PREFIX.sub("", ANSI_ESCAPE_PATTERN.sub("", line)).strip().lower()
+
+
+def _step_definition_end(lines: list[str], start: int) -> int | None:
+    """Index of the closing ##[endgroup] if lines[start] opens the definition of a `run:` step, else None.
+
+    A `run:` step definition always contains a `shell: ...` line; groups a script prints itself
+    (echo "::group::Run tests") do not, so they are never mistaken for a step definition."""
+    has_shell = False
+    for index in range(start + 1, len(lines)):
+        marker = _log_marker(lines[index])
+        if marker.startswith("##[endgroup]"):
+            return index if has_shell else None
+        if marker.startswith("shell:"):
+            has_shell = True
+    return None
+
+
+def strip_step_definitions(log_text: str) -> str:
+    """Remove the echoed step definitions (the full `run:` script, shell and env block) from a job log.
+
+    GitHub prints every `run:` step as a collapsed `##[group]Run ...` ... `##[endgroup]` block before the
+    step's real output. That text is workflow source code, not runtime output, so keywords inside it (a
+    script that greps for CrashLoopBackOff, hint/root_cause strings ...) must never count as evidence.
+    A group that is never closed is kept untouched."""
+    lines = log_text.splitlines()
+    kept: list[str] = []
+    index = 0
+    while index < len(lines):
+        if _log_marker(lines[index]).startswith("##[group]run "):
+            end = _step_definition_end(lines, index)
+            if end is not None:
+                index = end + 1
+                continue
+        kept.append(lines[index])
+        index += 1
+    return "\n".join(kept)
+
+
 def _is_non_evidence_line(line: str) -> bool:
     """Reject shell/diagnostic code and API debug payloads - only runtime output is evidence."""
     normalized = re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]", "", line).lower()
+    # Raw log lines start with a timestamp; line-anchored checks must look at the text after it.
+    content = re.sub(r"^\d{4}-\d{2}-\d{2}t\d{2}:\d{2}:\d{2}\.\d+z\s+", "", normalized)
+    if content.lstrip().startswith(("##[group]", "##[endgroup]")):
+        return True
     if re.search(r"step\s+\d+\s+response", normalized):
         return True
     if '"result"' in normalized and ('"parent"' in normalized or '"sys_id"' in normalized or "service-now.com" in normalized):
@@ -702,14 +751,13 @@ def _is_non_evidence_line(line: str) -> bool:
         return True
     if normalized.count("|") >= 3:
         return True
-    if re.match(r"^\s*(if|elif|while|case)\b.*\b(then|do)\b", normalized):
+    if re.match(r"^\s*(if|elif|while|case)\b.*\b(then|do)\b", content):
         return True
     if re.search(r"\bif echo\b", normalized) or re.search(r'case\s+"\$', normalized):
         return True
-    if normalized.lstrip().startswith(("#!/", "function ", "set -e", "set -euo pipefail", "run #")):
+    if content.lstrip().startswith(("#!/", "function ", "set -e", "set -euo pipefail", "run #")):
         return True
-    # Shell/script comment echoed into the log (timestamp prefix stripped first).
-    content = re.sub(r"^\d{4}-\d{2}-\d{2}t\d{2}:\d{2}:\d{2}\.\d+z\s+", "", normalized)
+    # Shell/script comment echoed into the log.
     if content.startswith("#") and not content.startswith("##"):
         return True
     # Self-declared non-fatal diagnostics and GH Actions warnings are not failures.
@@ -756,8 +804,8 @@ def _evidence_snippet(log_text: str, pattern: str) -> str:
     return ""
 
 
-def _evidence_context(log_text: str, pattern: str) -> str:
-    """Return a multi-line context window (5 before / match / 10 after) around the first match."""
+def _evidence_context(log_text: str, pattern: str) -> tuple[str, str]:
+    """Return (context window of 5 before / match / 10 after, the matching line) for the first match."""
     matcher = re.compile(pattern, re.IGNORECASE)
     raw_lines = log_text.splitlines()
     deduped_lines = _dedupe_repeated_lines(raw_lines)
@@ -774,8 +822,9 @@ def _evidence_context(log_text: str, pattern: str) -> str:
             if not _is_non_evidence_line(w)
         ]
         text = "\n".join(w for w in window if w)
-        return text[:MAX_LOG_EVIDENCE_LENGTH]
-    return ""
+        matched_line = re.sub(r"\s+", " ", re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]", "", line)).strip()
+        return text[:MAX_LOG_EVIDENCE_LENGTH], matched_line
+    return "", ""
 
 
 def extract_change_numbers(texts) -> list[str]:
@@ -954,7 +1003,8 @@ def find_change_number_from_cr_jobs(client, errors, ctx, repo, run_id, attempt, 
         resp = guarded_get(client, errors, ctx, f"{GITHUB_API}/repos/{repo}/actions/jobs/{job['id']}/logs")
         if resp is None:
             continue
-        match = CHG_LOG_LINE_PATTERN.search(resp.text) or CHANGE_NUMBER_PATTERN.search(resp.text)
+        log_text = strip_step_definitions(resp.text)
+        match = CHG_LOG_LINE_PATTERN.search(log_text) or CHANGE_NUMBER_PATTERN.search(log_text)
         if match:
             number = (match.group(1) if match.lastindex else match.group(0)).upper()
             return number, f"job '{job.get('name')}'"
@@ -995,7 +1045,7 @@ def _apply_analysis(record: dict, analysis: dict) -> None:
     record["FailureCategory"] = analysis["failure_category"]
     record["RootCause"] = analysis["root_cause"]
     record["Evidence"] = analysis.get("evidence") or "N/A"
-    record["ErrorSummary"] = summarize_error(analysis)
+    record["ErrorSummary"] = (analysis.get("error_line") or summarize_error(analysis))[:200]
     record["SourceJob"] = analysis.get("source_job") or "N/A"
     record["RecommendedAction"] = analysis.get("recommended_action") or "N/A"
 
@@ -1086,7 +1136,7 @@ def analyze_failed_deployment(client, errors, cache, repo: str, event: dict, env
             "Open the workflow run and inspect it manually."))
         return record
 
-    # Logs of the failed jobs only.
+    # Logs of the failed jobs only (echoed step definitions / workflow script source are removed).
     log_by_job: dict[str, str] = {}
     log_failures = 0
     with ThreadPoolExecutor(max_workers=MAX_LOG_WORKERS) as executor:
@@ -1097,7 +1147,7 @@ def analyze_failed_deployment(client, errors, cache, repo: str, event: dict, env
         for future in as_completed(futures):
             job = futures[future]
             resp = future.result()
-            log_by_job[str(job["id"])] = resp.text if resp is not None else ""
+            log_by_job[str(job["id"])] = strip_step_definitions(resp.text) if resp is not None else ""
             log_failures += resp is None
 
     # CHG: log of the get-cr-number / check-snow-cr-status job; fallbacks are the failed jobs' logs, then
@@ -1137,7 +1187,7 @@ def analyze_failed_deployment(client, errors, cache, repo: str, event: dict, env
         else:
             pod_resp = guarded_get(client, errors, ctx, f"{GITHUB_API}/repos/{repo}/actions/jobs/{pod_job['id']}/logs")
             if pod_resp is not None:
-                log_by_job[str(pod_job["id"])] = pod_resp.text
+                log_by_job[str(pod_job["id"])] = strip_step_definitions(pod_resp.text)
                 with_pod = analyze_jobs(failed_jobs + [pod_job], log_by_job)
                 if _rca_strength(with_pod) > _rca_strength(analysis):
                     analysis = with_pod
@@ -1220,7 +1270,7 @@ def _collect_rule_signals(rules, jobs: list[dict], log_by_job: dict[str, str]) -
         for job in jobs:
             log_text = log_by_job.get(str(job.get("id")), "")
             for pattern in rule["patterns"]:
-                context = _evidence_context(log_text, pattern["regex"])
+                context, matched_line = _evidence_context(log_text, pattern["regex"])
                 if not context:
                     continue
                 description = pattern["description"](context) if callable(pattern["description"]) else pattern["description"]
@@ -1228,6 +1278,7 @@ def _collect_rule_signals(rules, jobs: list[dict], log_by_job: dict[str, str]) -
                     "category": rule["category"],
                     "priority": rule["priority"],
                     "evidence": context,
+                    "error_line": matched_line,
                     "source_job": job.get("name", "unknown job"),
                     "description": description,
                     "action": rule.get("action", ""),
@@ -1252,6 +1303,7 @@ def analyze_jobs(jobs: list[dict], log_by_job: dict[str, str]) -> dict:
                 "failure_category": primary["category"],
                 "root_cause": primary["description"],
                 "evidence": primary["evidence"],
+                "error_line": primary["error_line"],
                 "recommended_action": primary["action"],
                 "source_job": primary["source_job"],
             }
@@ -1323,6 +1375,7 @@ def _analyze_standard(jobs: list[dict], log_by_job: dict[str, str]) -> dict:
                 "failure_category": top_symptom["category"],
                 "root_cause": summary,
                 "evidence": top_symptom["evidence"],
+                "error_line": top_symptom["evidence"],
                 "recommended_action": "Inspect the pod/workload events and application logs preceding this symptom to find the underlying cause.",
                 "source_job": top_symptom["source_job"],
             }
@@ -1343,6 +1396,7 @@ def _analyze_standard(jobs: list[dict], log_by_job: dict[str, str]) -> dict:
         "failure_category": primary["category"],
         "root_cause": primary["description"],
         "evidence": primary["evidence"],
+        "error_line": primary["error_line"],
         "recommended_action": primary["action"] or "Inspect the strongest evidence in the failed job and dependent workload diagnostics before retrying.",
         "source_job": primary["source_job"],
     }
@@ -1381,19 +1435,17 @@ def write_summary_markdown(path, args, environment, stats, records, error_rows, 
 
         h.write("## Summary Statistics\n\n")
         for label, key in (
-            ("Unsuccessful CHGs in ServiceNow", "snow_changes"),
-            ("Repositories queried in GitHub", "repositories"),
-            ("Failed CHGs analyzed", "failed_deployments"),
-            ("CHG found in workflow jobs/logs", "chg_found"),
-            ("CHG not found in logs", "chg_not_found"),
+            ("Unsuccessful CHGs in ServiceNow dashboard", "snow_changes"),
+            ("Unique repositories discovered", "repositories"),
+            ("Failed PRD deployments for the repositories", "failed_deployments"),
         ):
             h.write(f"- {label}: `{stats[key]}`\n")
         h.write("\n")
 
         for title, rows, header in (
-            ("Top Repositories", top_repos, ("Repository", "Failed CHGs")),
-            ("Top Failure Owners", top_owners, ("Owner", "Failed CHGs")),
-            ("Top Failure Technologies", top_techs, ("Technology", "Failed CHGs")),
+            ("Top Repositories", top_repos, ("Repository", "Failed deployments")),
+            ("Top Failure Owners", top_owners, ("Owner", "Failed deployments")),
+            ("Top Failure Technologies", top_techs, ("Technology", "Failed deployments")),
         ):
             h.write(f"## {title}\n\n| {header[0]} | {header[1]} | Percentage |\n|---|---|---|\n")
             for value, count, pct in rows or [("_none_", 0, 0.0)]:
