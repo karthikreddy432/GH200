@@ -71,23 +71,27 @@ def _invalid_commit_description(evidence: str) -> str:
 def _missing_placeholder_description(evidence: str) -> str:
     # Only "- ***NAME***" bullet lines list the actually-missing placeholders; "Replacing
     # variable ***NAME***" lines nearby refer to ones that were resolved successfully.
-    names = list(dict.fromkeys(re.findall(r"^\s*-\s*\*\*\*([A-Za-z0-9_.\-]+)\*\*\*", evidence, re.MULTILINE)))
+    names = list(dict.fromkeys(re.findall(r"^\s*(?:\ufeff?\d{4}-\d{2}-\d{2}T[\d:.]+Z\s*)?-\s*\*\*\*([A-Za-z0-9_.\-]+)\*\*\*", evidence, re.MULTILINE)))
     if names:
         return f"Deployment failed because required CI/CD variables/secrets were not defined: {', '.join(names)}."
     return "Deployment failed because one or more required CI/CD variables/secrets were not defined for placeholder replacement."
 
 
+# Checked FIRST in the failed-job logs, before the workflow failure summary, the Kubernetes rules and
+# every other rule: placeholder replacement failed because variables/secrets are not defined.
+MISSING_VARIABLES_RULE = {
+    "category": "Missing CI/CD variable or secret definition",
+    "priority": 99,
+    "patterns": (
+        {"regex": r"unreplaced placeholders", "description": _missing_placeholder_description},
+        {"regex": r"PLACEHOLDER REPLACEMENT FAILED", "description": _missing_placeholder_description},
+        {"regex": r"Missing variables/secrets that need to be defined", "description": _missing_placeholder_description},
+    ),
+    "action": "Define the missing variables/secrets (with normalized names) in Tech Central for this component's CI/CD configuration, then retry the deployment.",
+}
+
+
 ROOT_CAUSE_RULES = (
-    {
-        "category": "Missing CI/CD variable or secret definition",
-        "priority": 99,
-        "patterns": (
-            {"regex": r"unreplaced placeholders", "description": _missing_placeholder_description},
-            {"regex": r"PLACEHOLDER REPLACEMENT FAILED", "description": _missing_placeholder_description},
-            {"regex": r"Missing variables/secrets that need to be defined", "description": _missing_placeholder_description},
-        ),
-        "action": "Define the missing variables/secrets (with normalized names) in Tech Central for this component's CI/CD configuration, then retry the deployment.",
-    },
     {
         "category": "Credential / authentication issue",
         "priority": 98,
@@ -236,8 +240,6 @@ ROOT_CAUSE_RULES = (
         "priority": 91.5,
         "patterns": (
             {"regex": r"could not find artifact", "description": "A required artifact could not be found in the Nexus repository."},
-            {"regex": r"nexus.*(404|not found)", "description": "Nexus reported the requested artifact as not found (404)."},
-            {"regex": r"(404|not found).*nexus", "description": "Nexus reported the requested artifact as not found (404)."},
             {"regex": r"artifact.*(not found|does not exist)", "description": "The artifact to deploy was not found in the artifact repository."},
             {"regex": r"failed to (download|fetch|resolve) artifact", "description": "The deployment could not download/resolve the required artifact."},
         ),
@@ -414,13 +416,6 @@ K8S_ERROR_RULES = (
             {"regex": r"startup probe failed", "description": "The pod failed its startup probe."},
         ),
         "action": "Check the probe path/port/timeouts and the application's startup logs.",
-    },
-    {
-        "category": "Kubernetes: Progress deadline exceeded",
-        "priority": 85,
-        "symptom_like": True,
-        "patterns": ({"regex": r"progress deadline exceeded|ProgressDeadlineExceeded", "description": "The Deployment did not complete within its progress deadline."},),
-        "action": "Inspect the new pods' events and logs to see why the rollout did not complete.",
     },
 )
 
@@ -822,7 +817,7 @@ def _evidence_context(log_text: str, pattern: str) -> tuple[str, str]:
             if not _is_non_evidence_line(w)
         ]
         text = "\n".join(w for w in window if w)
-        matched_line = re.sub(r"\s+", " ", re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]", "", line)).strip()
+        matched_line = re.sub(r"\s+", " ", LOG_TIMESTAMP_PREFIX.sub("", re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]", "", line))).strip()
         return text[:MAX_LOG_EVIDENCE_LENGTH], matched_line
     return "", ""
 
@@ -1291,22 +1286,139 @@ def _collect_rule_signals(rules, jobs: list[dict], log_by_job: dict[str, str]) -
     return signals
 
 
+# ---------------------------------------------------------------------------
+# "INTELLIGENT FAILURE SUMMARY" block printed by the Deploy helm chart job (Dynamic Replica and Pod
+# Readiness Check). Two layouts are supported:
+#   ===== INTELLIGENT FAILURE SUMMARY =====      === INTELLIGENT FAILURE SUMMARY ===
+#   ROOT_CAUSE=... EXACT_ERROR_LINE=...           Context: ... / Root Cause: ... / Exact Signal: ...
+#   SUGGESTED_ACTION=... TOP_SIGNALS=...          Suggested Action: ...
+# ---------------------------------------------------------------------------
+FAILURE_SUMMARY_START = re.compile(r"^=+\s*intelligent failure summary\s*=+$", re.IGNORECASE)
+FAILURE_SUMMARY_FIELD = re.compile(
+    r"^(root[ _]cause|exact[ _]error[ _]line|exact[ _]signal|suggested[ _]action|diagnostic[ _]limitation"
+    r"|diagnostics[ _]dir|context|top[ _]signals)\s*[=:]\s*(.*)$",
+    re.IGNORECASE,
+)
+FAILURE_SUMMARY_MAX_LINES = 60
+INCONCLUSIVE_ROOT_CAUSE = re.compile(
+    r"\b(unknown|undetermined|inconclusive|unable to determine)\b|no (clear|specific|obvious) root cause", re.IGNORECASE
+)
+
+
+def _clean_log_line(line: str) -> str:
+    return LOG_TIMESTAMP_PREFIX.sub("", ANSI_ESCAPE_PATTERN.sub("", line)).strip()
+
+
+def _parse_failure_summaries(log_text: str) -> list[dict]:
+    """Every failure-summary block in a log, as {root_cause, error_line, action, lines}."""
+    lines = log_text.splitlines()
+    blocks: list[dict] = []
+    index = 0
+    while index < len(lines):
+        if not FAILURE_SUMMARY_START.match(_clean_log_line(lines[index])):
+            index += 1
+            continue
+        fields: dict[str, str] = {}
+        kept: list[str] = []
+        current = None
+        end = index + 1
+        while end < len(lines) and end - index <= FAILURE_SUMMARY_MAX_LINES:
+            text = _clean_log_line(lines[end])
+            if re.fullmatch(r"=+", text) or text.startswith("##[") or FAILURE_SUMMARY_START.match(text):
+                break
+            field = FAILURE_SUMMARY_FIELD.match(text)
+            if field:
+                current = re.sub(r"[ _]+", "_", field.group(1).lower())
+                fields.setdefault(current, field.group(2).strip())
+                kept.append(text)
+                if current == "diagnostics_dir":
+                    end += 1
+                    break
+            elif current == "top_signals" and text:
+                kept.append(text)
+            end += 1
+        index = max(end, index + 1)
+        error_line = re.sub(r"\s+", " ", fields.get("exact_error_line") or fields.get("exact_signal") or "").strip()
+        if fields.get("root_cause"):
+            blocks.append({
+                "root_cause": fields["root_cause"].strip(),
+                "error_line": error_line,
+                "action": fields.get("suggested_action", "").strip(),
+                # RBAC "forbidden" lines are diagnostic limitations, never part of the reported evidence.
+                "lines": [l for l in kept if not any(re.search(p, l, re.IGNORECASE) for p in IGNORED_PATTERNS)],
+            })
+    return blocks
+
+
+def _match_k8s_rule(text: str) -> dict | None:
+    """Highest-priority Kubernetes rule whose pattern appears in the text."""
+    best = None
+    for rule in K8S_ERROR_RULES:
+        if any(re.search(p["regex"], text, re.IGNORECASE) for p in rule["patterns"]):
+            if best is None or rule["priority"] > best["priority"]:
+                best = rule
+    return best
+
+
+def _signal_result(signal: dict) -> dict:
+    return {
+        "failure_category": signal["category"],
+        "root_cause": signal["description"],
+        "evidence": signal["evidence"],
+        "error_line": signal["error_line"],
+        "recommended_action": signal["action"],
+        "source_job": signal["source_job"],
+    }
+
+
+def _failure_summary_analysis(jobs: list[dict], log_by_job: dict[str, str]) -> dict | None:
+    """RCA taken from the workflow's own failure summary (the last conclusive block wins). The category comes
+    from the Kubernetes rules applied to the block's root cause / exact signal, when one matches."""
+    chosen = None
+    for job in jobs:
+        for block in _parse_failure_summaries(log_by_job.get(str(job.get("id")), "")):
+            if not INCONCLUSIVE_ROOT_CAUSE.search(block["root_cause"]):
+                chosen = (job, block)
+    if chosen is None:
+        return None
+    job, block = chosen
+    rule = _match_k8s_rule(f"{block['error_line']} {block['root_cause']}")
+    result = {
+        "failure_category": rule["category"] if rule else "Deployment failure (workflow summary)",
+        "root_cause": block["root_cause"],
+        "evidence": "\n".join(block["lines"])[:MAX_LOG_EVIDENCE_LENGTH],
+        "error_line": block["error_line"] or block["root_cause"],
+        "recommended_action": block["action"] or (rule["action"] if rule else "Review the failure summary in the deployment job log."),
+        "source_job": job.get("name", "unknown job"),
+    }
+    if rule and rule.get("symptom_like"):  # e.g. CrashLoopBackOff: keep a deeper application error visible
+        standard = _analyze_standard(jobs, log_by_job)
+        if _rca_strength(standard) == 2:
+            result["root_cause"] += f" Underlying error seen in the logs: {standard['root_cause']}"
+    return result
+
+
 def analyze_jobs(jobs: list[dict], log_by_job: dict[str, str]) -> dict:
-    """Kubernetes errors (CreateContainerConfigError, ImagePullBackOff, OOMKilled, CrashLoopBackOff ...)
-    are looked for first and taken as the root cause; if none is present the regular rules run."""
+    """RCA order for the given jobs:
+      1. missing CI/CD variables/secrets (placeholder replacement failed)
+      2. the workflow's "INTELLIGENT FAILURE SUMMARY" block (categorised with the Kubernetes rules)
+      3. Kubernetes errors (CreateContainerConfigError, ImagePullBackOff, OOMKilled, CrashLoopBackOff ...)
+      4. the regular ROOT_CAUSE_RULES
+    """
     if jobs:
+        missing = _collect_rule_signals((MISSING_VARIABLES_RULE,), jobs, log_by_job)
+        if missing:
+            return _signal_result(missing[0])
+
+        summary = _failure_summary_analysis(jobs, log_by_job)
+        if summary:
+            return summary
+
         k8s_signals = _collect_rule_signals(K8S_ERROR_RULES, jobs, log_by_job)
         if k8s_signals:
             k8s_signals.sort(key=lambda s: (s["priority"], len(s["evidence"])), reverse=True)
             primary = k8s_signals[0]
-            result = {
-                "failure_category": primary["category"],
-                "root_cause": primary["description"],
-                "evidence": primary["evidence"],
-                "error_line": primary["error_line"],
-                "recommended_action": primary["action"],
-                "source_job": primary["source_job"],
-            }
+            result = _signal_result(primary)
             if primary["symptom_like"]:  # keep a deeper application error visible, if the logs show one
                 standard = _analyze_standard(jobs, log_by_job)
                 if _rca_strength(standard) == 2:
