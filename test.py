@@ -310,6 +310,8 @@ jobs:
   #   - Cluster comes from topics: aksspoke2 / aksenclave / akshub / ocp|openshift
   #   - Environments are checked in order and checking STOPS at the first hit:
   #       AKS: prd -> uat -> unt        OCP: prd -> uat -> prf
+  #   - A deployment is "active" only if a workload NAME equals the repo name
+  #     (other repos' workloads in the same namespace do not block)
   #   - Only repos with NO active deployment end up in validated-repos.json
   #   - Repos that cannot be validated (auth/network/API errors) are blocked
   #     (fail safe) and never reach mark_for_delete
@@ -586,8 +588,12 @@ jobs:
                   return None
               return ["oc", "--context", ctx]
 
-          def check_resources(base_cmd, namespace, resources):
+          def check_resources(base_cmd, namespace, resources, repo_name):
               """Returns ("active", resource) | ("none", "") | ("error", detail).
+
+              CHANGED: a workload only counts as "active" when its NAME equals the
+              repo name. Other workloads living in the same (shared) namespace
+              belong to other repos and no longer block this one.
 
               A missing namespace returns an empty list (rc 0), i.e. "none".
               Any command failure (auth, network, RBAC, timeout) is "error",
@@ -596,11 +602,16 @@ jobs:
               problem = ""
               for resource in resources:
                   rc, out, err = run(
-                      base_cmd + ["get", resource, "-n", namespace, "--no-headers"]
+                      base_cmd + [
+                          "get", resource, "-n", namespace,
+                          "-o", "custom-columns=NAME:.metadata.name",
+                          "--no-headers",
+                      ]
                   )
 
                   if rc == 0:
-                      if out.strip():
+                      names = {line.strip() for line in out.splitlines() if line.strip()}
+                      if repo_name in names:
                           return "active", resource
                       continue
 
@@ -701,7 +712,7 @@ jobs:
                       problems.append(f"{env_name}: credentials unavailable")
                       continue
 
-                  state, detail = check_resources(cmd, ns, resources)
+                  state, detail = check_resources(cmd, ns, resources, repo_name)
 
                   if state == "active":
                       repo[env_name] = "ACTIVE"
